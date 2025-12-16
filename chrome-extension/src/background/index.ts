@@ -20,3 +20,17 @@ chrome.runtime.onConnect.addListener(function (port) {
     });
   }
 });
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "react-ai-experiments_EVENT") {
+    console.log("Received from iframe:", message.payload);
+
+    // Example: persist data
+    // chrome.storage.local.set({ lastEvent: message.payload });
+
+    sendResponse({ status: "ok", name: "Rahul" });
+  }
+
+  // REQUIRED if async
+  return true;
+});
