@@ -21,6 +21,8 @@ chrome.runtime.onConnect.addListener(function (port) {
   }
 });
 
+// workaround answer
+// https://stackoverflow.com/questions/77213045/error-sidepanel-open-may-only-be-called-in-response-to-a-user-gesture-re#:~:text=The%20workaround%20for,Copy
 let activeTabId: number | undefined;
 // keep alive, see stackoverflow.com/a/66618269
 setInterval(chrome.runtime.getPlatformInfo, 25e3);
