@@ -29,6 +29,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // chrome.storage.local.set({ lastEvent: message.payload });
 
     sendResponse({ status: "ok", name: "Rahul" });
+  } else if (message.type === "IFRAME_EVENT") {
+    console.log("Received from sidepanel:", message.payload);
+
+    // Example: persist data
+    // chrome.storage.local.set({ lastEvent: message.payload });
+
+    sendResponse({ status: "ok", name: "Mehak" });
   }
 
   // REQUIRED if async

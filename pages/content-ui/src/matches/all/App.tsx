@@ -7,21 +7,21 @@ export default function App() {
     console.log("[CEB] Content ui all loaded");
     window.addEventListener("message", async (event) => {
       // 🔒 SECURITY CHECK
-      if (event.source !== window) return;
-      if (event.origin !== "http://localhost:5173") return;
-      if (!event.data || event.data.source !== "react-ai-experiments") return;
+      // if (event.source !== window) return;
+      // if (event.origin !== "http://localhost:5173") return;
+      // if (!event.data || event.data.source !== "react-ai-experiments") return;
       console.log(event.data.payload);
-      const response = await chrome.runtime.sendMessage({
-        type: "react-ai-experiments_EVENT",
-        payload: event.data.payload,
-      });
-      window.postMessage(
-        {
-          type: "EXTENSION_RESPONSE",
-          response,
-        },
-        "*",
-      );
+      // const response = await chrome.runtime.sendMessage({
+      //   type: "react-ai-experiments_EVENT",
+      //   payload: event.data.payload,
+      // });
+      // window.postMessage(
+      //   {
+      //     type: "EXTENSION_RESPONSE",
+      //     response,
+      //   },
+      //   "*",
+      // );
     });
   }, []);
 
