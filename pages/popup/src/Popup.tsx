@@ -30,24 +30,26 @@ const Popup = () => {
       active: true,
     });
 
-    if (tab.url!.startsWith("about:") || tab.url!.startsWith("chrome:")) {
-      chrome.notifications.create("inject-error", notificationOptions);
-    }
+    if (tab) {
+      if (tab.url!.startsWith("about:") || tab.url!.startsWith("chrome:")) {
+        chrome.notifications.create("inject-error", notificationOptions);
+      }
 
-    await chrome.scripting
-      .executeScript({
-        target: { tabId: tab.id! },
-        files: [
-          "/content-runtime/example.iife.js",
-          "/content-runtime/all.iife.js",
-        ],
-      })
-      .catch((err) => {
-        // Handling errors related to other paths
-        if (err.message.includes("Cannot access a chrome:// URL")) {
-          chrome.notifications.create("inject-error", notificationOptions);
-        }
-      });
+      await chrome.scripting
+        .executeScript({
+          target: { tabId: tab.id! },
+          files: [
+            "/content-runtime/example.iife.js",
+            "/content-runtime/all.iife.js",
+          ],
+        })
+        .catch((err) => {
+          // Handling errors related to other paths
+          if (err.message.includes("Cannot access a chrome:// URL")) {
+            chrome.notifications.create("inject-error", notificationOptions);
+          }
+        });
+    }
   };
 
   return (
@@ -84,7 +86,7 @@ const Popup = () => {
               currentWindow: true,
               active: true,
             });
-            if (tab.id) {
+            if (tab?.id) {
               await chrome.sidePanel.open({ tabId: tab.id });
             }
           }}

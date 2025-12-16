@@ -62,9 +62,14 @@ export default config(
       },
     },
     rules: {
+      // custom start
+      "@typescript-eslint/ban-ts-comment": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "prefer-const": "off",
+      "no-empty": "off",
+      // custom end
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
-      "prefer-const": "error",
       "no-var": "error",
       "func-style": ["error", "expression", { allowArrowFunctions: true }],
       "no-restricted-imports": [
