@@ -36,24 +36,35 @@ chrome.tabs.onActivated.addListener((info) => {
 });
 
 chrome.commands.onCommand.addListener((command) => {
-  if (command === "open-sidepanel") {
+  if (command === "toggle-sidepanel") {
     if (sidePanelOpen) {
       chrome.sidePanel.setOptions({
         tabId: activeTabId,
         enabled: false,
       });
     } else {
-      chrome.sidePanel.setOptions(
-        {
-          tabId: activeTabId,
-          enabled: true,
-          path: "side-panel/index.html",
-        },
-        () => {
-          // @ts-expect-error
-          chrome.sidePanel.open({ tabId: activeTabId });
-        },
-      );
+      if (activeTabId) {
+        // after tab change this method will continue to work always
+        chrome.sidePanel.setOptions(
+          {
+            tabId: activeTabId,
+            enabled: true,
+            path: "side-panel/index.html",
+          },
+          () => {
+            // @ts-expect-error
+            chrome.sidePanel.open({ tabId: activeTabId });
+          },
+        );
+      } else {
+        // if you won't change tab from chrome://extensions, below works for just 1 time
+        // after opening and closing once sidepanel, then if we try to open, this method will fail
+        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+          if (tab?.id) {
+            chrome.sidePanel.open({ tabId: tab.id });
+          }
+        });
+      }
     }
   }
 });

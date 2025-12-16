@@ -42,12 +42,12 @@ const manifest = {
     default_icon: "icon-34.png",
   },
   commands: {
-    "open-sidepanel": {
+    "toggle-sidepanel": {
       suggested_key: {
         default: "Ctrl+Shift+I",
         mac: "Command+Shift+I",
       },
-      description: "Open Side Panel",
+      description: "Toggle Side Panel",
     },
   },
   chrome_url_overrides: {
