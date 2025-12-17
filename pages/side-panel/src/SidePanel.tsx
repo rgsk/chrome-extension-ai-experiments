@@ -1,7 +1,7 @@
 import { withErrorBoundary, withSuspense } from "@extension/shared";
 import { ErrorDisplay, LoadingSpinner } from "@extension/ui";
 import "@src/SidePanel.css";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 } from "uuid";
 
 const iframeOrigin = "http://localhost:5173";
@@ -9,6 +9,9 @@ const iframeOrigin = "http://localhost:5173";
 const SidePanel = () => {
   const chatId = useMemo(() => v4(), []);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeState, setIframeState] = useState<{
+    connectionActive: boolean;
+  }>({ connectionActive: false });
   const sendMessageToIframe = useCallback(
     (payload: { type: string; body: Record<string, unknown> }) => {
       const iframe = iframeRef.current;
@@ -27,10 +30,10 @@ const SidePanel = () => {
 
   const onMessageFromIframe = useCallback(
     (payload: { type: string; body: Record<string, unknown> }) => {
-      console.log({ onMessageFromIframe: "onMessageFromIframe", payload });
       switch (payload.type) {
         case "PING": {
           const { message } = payload.body as { message: string };
+          setIframeState((prev) => ({ ...prev, connectionActive: true }));
           sendMessageToIframe({
             type: "PONG",
             body: {
@@ -59,24 +62,30 @@ const SidePanel = () => {
 
   const onMessageFromServiceWorker = useCallback(
     (payload: { type: string; body: Record<string, unknown> }) => {
-      console.log({
-        onMessageFromServiceWorker: "onMessageFromServiceWorker",
-        payload,
-      });
       switch (payload.type) {
         case "TAB_ACTIVATED": {
           const { tab } = payload.body as { tab: chrome.tabs.Tab };
-          console.log(tab.url);
+          if (tab.url) {
+            sendMessageToIframe({
+              type: "TAB_URL_CHANGED",
+              body: { tabUrl: tab.url },
+            });
+          }
           break;
         }
         case "TAB_UPDATED": {
           const { tab } = payload.body as { tab: chrome.tabs.Tab };
-          console.log(tab.url);
+          if (tab.url) {
+            sendMessageToIframe({
+              type: "TAB_URL_CHANGED",
+              body: { tabUrl: tab.url },
+            });
+          }
           break;
         }
       }
     },
-    [],
+    [sendMessageToIframe],
   );
 
   useEffect(() => {
@@ -87,6 +96,19 @@ const SidePanel = () => {
       }
     });
   }, [onMessageFromServiceWorker]);
+
+  useEffect(() => {
+    if (iframeState.connectionActive) {
+      chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+        if (tab?.url) {
+          sendMessageToIframe({
+            type: "TAB_URL_CHANGED",
+            body: { tabUrl: tab.url },
+          });
+        }
+      });
+    }
+  }, [iframeState.connectionActive, sendMessageToIframe]);
   return (
     <div className="h-screen">
       <button
