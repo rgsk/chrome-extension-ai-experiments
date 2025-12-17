@@ -40,10 +40,8 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.url) {
-    sendMessageToSidepanel({
-      type: "TAB_UPDATED",
-      body: { tab },
-    });
-  }
+  sendMessageToSidepanel({
+    type: "TAB_UPDATED",
+    body: { tab },
+  });
 });
