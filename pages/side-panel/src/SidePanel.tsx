@@ -4,6 +4,8 @@ import "@src/SidePanel.css";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { v4 } from "uuid";
 
+const iframeOrigin = "http://localhost:5173";
+
 const SidePanel = () => {
   const chatId = useMemo(() => v4(), []);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -15,7 +17,7 @@ const SidePanel = () => {
           type: "message-to-iframe-from-extension",
           response: body,
         },
-        "http://localhost:5173", // 🔒 exact iframe origin
+        iframeOrigin, // 🔒 exact iframe origin
       );
     }
   }, []);
@@ -27,7 +29,7 @@ const SidePanel = () => {
   useEffect(() => {
     window.addEventListener("message", (event) => {
       // 🔒 SECURITY CHECK
-      if (event.origin !== "http://localhost:5173") return;
+      if (event.origin !== iframeOrigin) return;
 
       if (event.data?.type === "message-from-iframe-to-extension") {
         const payload = event.data.payload;
