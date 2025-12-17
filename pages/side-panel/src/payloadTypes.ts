@@ -1,11 +1,14 @@
+export type TabDetails = {
+  url: string;
+  title?: string;
+  favIconUrl?: string;
+};
+
 export type MessageFromExtensionToIframePayload =
   | {
       type: "TAB_URL_CHANGED";
       body: {
-        tabDetails: {
-          url: string;
-          favIconUrl?: string;
-        };
+        tabDetails: TabDetails;
       };
     }
   | {

@@ -74,7 +74,11 @@ const SidePanel = () => {
             sendMessageToIframe({
               type: "TAB_URL_CHANGED",
               body: {
-                tabDetails: { url: tab.url, favIconUrl: tab.favIconUrl },
+                tabDetails: {
+                  url: tab.url,
+                  title: tab.title,
+                  favIconUrl: tab.favIconUrl,
+                },
               },
             });
           }
@@ -86,7 +90,11 @@ const SidePanel = () => {
             sendMessageToIframe({
               type: "TAB_URL_CHANGED",
               body: {
-                tabDetails: { url: tab.url, favIconUrl: tab.favIconUrl },
+                tabDetails: {
+                  url: tab.url,
+                  title: tab.title,
+                  favIconUrl: tab.favIconUrl,
+                },
               },
             });
           }
@@ -113,7 +121,11 @@ const SidePanel = () => {
           sendMessageToIframe({
             type: "TAB_URL_CHANGED",
             body: {
-              tabDetails: { url: tab.url, favIconUrl: tab.favIconUrl },
+              tabDetails: {
+                url: tab.url,
+                title: tab.title,
+                favIconUrl: tab.favIconUrl,
+              },
             },
           });
         }
