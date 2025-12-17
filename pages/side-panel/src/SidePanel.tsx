@@ -4,6 +4,7 @@ import { ErrorDisplay, LoadingSpinner } from "@extension/ui";
 import type {
   MessageFromExtensionToIframePayload,
   MessageFromIframeToExtensionPayload,
+  TabDetails,
 } from "@src/payloadTypes";
 import "@src/SidePanel.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -12,6 +13,28 @@ import { REACT_EXPERIMENTS_URL } from "../../../packages/env/lib";
 
 const iframeOrigin = REACT_EXPERIMENTS_URL;
 
+const getInnerTextForTab = async (tabId: number) => {
+  const result = await chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    func: () => document.body.innerText,
+  });
+  const innerText = result[0]?.result ?? "";
+  return innerText;
+};
+
+const getTabDetails = (tab: chrome.tabs.Tab) => {
+  if (tab.url && tab.id) {
+    const tabDetails: TabDetails = {
+      id: tab.id,
+      url: tab.url,
+      title: tab.title,
+      favIconUrl: tab.favIconUrl,
+    };
+    return tabDetails;
+  }
+  return null;
+};
+
 const SidePanel = () => {
   const chatId = useMemo(() => v4(), []);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -19,12 +42,16 @@ const SidePanel = () => {
     connectionActive: boolean;
   }>({ connectionActive: false });
   const sendMessageToIframe = useCallback(
-    (payload: MessageFromExtensionToIframePayload) => {
+    (
+      payload: MessageFromExtensionToIframePayload,
+      requestResponseId?: string,
+    ) => {
       const iframe = iframeRef.current;
       if (iframe && iframe.contentWindow) {
         iframe.contentWindow.postMessage(
           {
             type: "message-to-iframe-from-extension",
+            requestResponseId,
             payload: payload,
           },
           iframeOrigin ?? "*", // 🔒 exact iframe origin
@@ -35,7 +62,10 @@ const SidePanel = () => {
   );
 
   const onMessageFromIframe = useCallback(
-    (payload: MessageFromIframeToExtensionPayload) => {
+    async (
+      payload: MessageFromIframeToExtensionPayload,
+      requestResponseId?: string,
+    ) => {
       switch (payload.type) {
         case "PING": {
           const { message } = payload.body;
@@ -47,6 +77,20 @@ const SidePanel = () => {
               messageReceivedByExtension: message,
             },
           });
+          break;
+        }
+        case "GET_TAB_INNER_TEXT": {
+          const { tabId } = payload.body;
+          const innerText = await getInnerTextForTab(tabId);
+          sendMessageToIframe(
+            {
+              type: "GET_TAB_INNER_TEXT",
+              body: {
+                innerText,
+              },
+            },
+            requestResponseId,
+          );
           break;
         }
       }
@@ -61,25 +105,23 @@ const SidePanel = () => {
 
       if (event.data?.type === "message-from-iframe-to-extension") {
         const payload = event.data.payload;
-        onMessageFromIframe(payload);
+        const requestResponseId = event.data.requestResponseId;
+        onMessageFromIframe(payload, requestResponseId);
       }
     });
   }, [onMessageFromIframe]);
 
   const onMessageFromServiceWorker = useCallback(
-    (payload: MessageFromServiceWorkerToSidePanelPayload) => {
+    async (payload: MessageFromServiceWorkerToSidePanelPayload) => {
       switch (payload.type) {
         case "TAB_ACTIVATED": {
           const { tab } = payload.body;
-          if (tab.url) {
+          const tabDetails = getTabDetails(tab);
+          if (tabDetails) {
             sendMessageToIframe({
               type: "TAB_URL_CHANGED",
               body: {
-                tabDetails: {
-                  url: tab.url,
-                  title: tab.title,
-                  favIconUrl: tab.favIconUrl,
-                },
+                tabDetails,
               },
             });
           }
@@ -87,15 +129,12 @@ const SidePanel = () => {
         }
         case "TAB_UPDATED": {
           const { tab } = payload.body;
-          if (tab.url) {
+          const tabDetails = getTabDetails(tab);
+          if (tabDetails) {
             sendMessageToIframe({
               type: "TAB_URL_CHANGED",
               body: {
-                tabDetails: {
-                  url: tab.url,
-                  title: tab.title,
-                  favIconUrl: tab.favIconUrl,
-                },
+                tabDetails,
               },
             });
           }
@@ -117,20 +156,22 @@ const SidePanel = () => {
 
   useEffect(() => {
     if (iframeState.connectionActive) {
-      chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-        if (tab?.url) {
-          sendMessageToIframe({
-            type: "TAB_URL_CHANGED",
-            body: {
-              tabDetails: {
-                url: tab.url,
-                title: tab.title,
-                favIconUrl: tab.favIconUrl,
-              },
-            },
-          });
-        }
-      });
+      chrome.tabs.query(
+        { active: true, currentWindow: true },
+        async ([tab]) => {
+          if (tab) {
+            const tabDetails = getTabDetails(tab);
+            if (tabDetails) {
+              sendMessageToIframe({
+                type: "TAB_URL_CHANGED",
+                body: {
+                  tabDetails,
+                },
+              });
+            }
+          }
+        },
+      );
     }
   }, [iframeState.connectionActive, sendMessageToIframe]);
   return (
@@ -138,7 +179,7 @@ const SidePanel = () => {
       <iframe
         ref={iframeRef}
         title="React AI Experiments"
-        src={`${REACT_EXPERIMENTS_URL}/chat/${chatId}`}
+        src={`${REACT_EXPERIMENTS_URL}/practice`}
         className="w-full h-full"
       ></iframe>
     </div>
