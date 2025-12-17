@@ -8,8 +8,9 @@ import type {
 import "@src/SidePanel.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 } from "uuid";
+import { REACT_EXPERIMENTS_URL } from "../../../packages/env/lib";
 
-const iframeOrigin = "http://localhost:5173";
+const iframeOrigin = REACT_EXPERIMENTS_URL;
 
 const SidePanel = () => {
   const chatId = useMemo(() => v4(), []);
@@ -26,7 +27,7 @@ const SidePanel = () => {
             type: "message-to-iframe-from-extension",
             payload: payload,
           },
-          iframeOrigin, // 🔒 exact iframe origin
+          iframeOrigin ?? "*", // 🔒 exact iframe origin
         );
       }
     },
@@ -137,7 +138,7 @@ const SidePanel = () => {
       <iframe
         ref={iframeRef}
         title="React AI Experiments"
-        src={`http://localhost:5173/chat/${chatId}`}
+        src={`${REACT_EXPERIMENTS_URL}/chat/${chatId}`}
         className="w-full h-full"
       ></iframe>
     </div>
