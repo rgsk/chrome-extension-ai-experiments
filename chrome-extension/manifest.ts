@@ -42,7 +42,7 @@ const manifest = {
     default_icon: "icon-34.png",
   },
   commands: {
-    "open-sidepanel": {
+    "open-side_panel": {
       suggested_key: {
         default: "Ctrl+Shift+I",
         mac: "Command+Shift+I",

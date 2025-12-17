@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { withErrorBoundary, withSuspense } from "@extension/shared";
 import { ErrorDisplay, LoadingSpinner } from "@extension/ui";
 import "@src/SidePanel.css";
@@ -9,21 +10,21 @@ const iframeOrigin = "http://localhost:5173";
 const SidePanel = () => {
   const chatId = useMemo(() => v4(), []);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const sendMessageToIframe = useCallback((body: unknown) => {
+  const sendMessageToIframe = useCallback((payload: unknown) => {
     const iframe = iframeRef.current;
     if (iframe && iframe.contentWindow) {
       iframe.contentWindow.postMessage(
         {
           type: "message-to-iframe-from-extension",
-          response: body,
+          payload: payload,
         },
         iframeOrigin, // 🔒 exact iframe origin
       );
     }
   }, []);
 
-  const onMessageFromIframe = useCallback((body: unknown) => {
-    console.log({ onMessageFromIframe: "onMessageFromIframe", body });
+  const onMessageFromIframe = useCallback((payload: unknown) => {
+    console.log({ onMessageFromIframe: "onMessageFromIframe", payload });
   }, []);
 
   useEffect(() => {
@@ -38,6 +39,33 @@ const SidePanel = () => {
     });
   }, [onMessageFromIframe]);
 
+  const onMessageFromServiceWorker = useCallback((payload: any) => {
+    console.log({
+      onMessageFromServiceWorker: "onMessageFromServiceWorker",
+      payload,
+    });
+    switch (payload.type) {
+      case "TAB_ACTIVATED": {
+        const { tab } = payload as { tab: chrome.tabs.Tab };
+        console.log(tab.url);
+        break;
+      }
+      case "TAB_UPDATED": {
+        const { tab } = payload as { tab: chrome.tabs.Tab };
+        console.log(tab.url);
+        break;
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    chrome.runtime.onMessage.addListener((message) => {
+      if (message.type === "message-from-service_worker-to-side_panel") {
+        const payload = message.payload;
+        onMessageFromServiceWorker(payload);
+      }
+    });
+  }, [onMessageFromServiceWorker]);
   return (
     <div className="h-screen">
       <button
