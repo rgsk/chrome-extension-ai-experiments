@@ -20,7 +20,10 @@ chrome.commands.onCommand.addListener((command) => {
   }
 });
 
-const sendMessageToSidepanel = (payload: unknown) => {
+const sendMessageToSidepanel = (payload: {
+  type: string;
+  body: Record<string, unknown>;
+}) => {
   chrome.runtime.sendMessage({
     type: "message-from-service_worker-to-side_panel",
     payload,
@@ -32,7 +35,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 
   sendMessageToSidepanel({
     type: "TAB_ACTIVATED",
-    tab,
+    body: { tab },
   });
 });
 
@@ -40,7 +43,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.url) {
     sendMessageToSidepanel({
       type: "TAB_UPDATED",
-      tab,
+      body: { tab },
     });
   }
 });
