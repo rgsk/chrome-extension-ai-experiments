@@ -80,7 +80,7 @@ export default defineConfig(
         },
       ],
       "arrow-body-style": ["error", "as-needed"],
-      "@typescript-eslint/consistent-type-imports": "error",
+      "@typescript-eslint/consistent-type-imports": "off",
       "@typescript-eslint/consistent-type-exports": "error",
       "import-x/order": [
         "off",

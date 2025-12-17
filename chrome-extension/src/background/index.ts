@@ -1,4 +1,4 @@
-import type { MessageFromServiceWorkerToSidePanelPayload } from "@extension/shared";
+import { MessageFromServiceWorkerToSidePanelPayload } from "@extension/shared";
 import { exampleThemeStorage } from "@extension/storage";
 import "webextension-polyfill";
 
