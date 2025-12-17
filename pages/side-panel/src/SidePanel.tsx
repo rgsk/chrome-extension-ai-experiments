@@ -69,7 +69,7 @@ const SidePanel = () => {
     (payload: MessageFromServiceWorkerToSidepanel) => {
       switch (payload.type) {
         case "TAB_ACTIVATED": {
-          const { tab } = payload.body as { tab: chrome.tabs.Tab };
+          const { tab } = payload.body;
           if (tab.url) {
             sendMessageToIframe({
               type: "TAB_URL_CHANGED",
@@ -81,7 +81,7 @@ const SidePanel = () => {
           break;
         }
         case "TAB_UPDATED": {
-          const { tab } = payload.body as { tab: chrome.tabs.Tab };
+          const { tab } = payload.body;
           if (tab.url) {
             sendMessageToIframe({
               type: "TAB_URL_CHANGED",
