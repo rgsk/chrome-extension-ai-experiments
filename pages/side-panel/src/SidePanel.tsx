@@ -4,8 +4,6 @@ import "@src/SidePanel.css";
 import { useMemo } from "react";
 import { v4 } from "uuid";
 
-chrome.runtime.connect({ name: "mySidepanel" });
-
 const SidePanel = () => {
   const chatId = useMemo(() => v4(), []);
 

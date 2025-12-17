@@ -10,13 +10,12 @@ console.log(
   "Edit 'chrome-extension/src/background/index.ts' and save to reload.",
 );
 
-let sidePanelOpen = false;
-
-chrome.runtime.onConnect.addListener(function (port) {
-  if (port.name === "mySidepanel") {
-    sidePanelOpen = true;
-    port.onDisconnect.addListener(async () => {
-      sidePanelOpen = false;
+chrome.commands.onCommand.addListener((command) => {
+  if (command === "open-sidepanel") {
+    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+      if (tab?.id) {
+        chrome.sidePanel.open({ tabId: tab.id });
+      }
     });
   }
 });

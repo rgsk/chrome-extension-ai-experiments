@@ -41,6 +41,15 @@ const manifest = {
     default_popup: "popup/index.html",
     default_icon: "icon-34.png",
   },
+  commands: {
+    "open-sidepanel": {
+      suggested_key: {
+        default: "Ctrl+Shift+I",
+        mac: "Command+Shift+I",
+      },
+      description: "Open Side Panel",
+    },
+  },
   chrome_url_overrides: {
     newtab: "new-tab/index.html",
   },
