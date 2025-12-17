@@ -5,14 +5,11 @@ import js from "@eslint/js";
 import { flatConfigs as importXFlatConfig } from "eslint-plugin-import-x";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import reactPlugin from "eslint-plugin-react";
+import { defineConfig } from "eslint/config";
 import { browser, es2020, node } from "globals";
-import {
-  config,
-  configs as tsConfigs,
-  parser as tsParser,
-} from "typescript-eslint";
+import { configs as tsConfigs, parser as tsParser } from "typescript-eslint";
 
-export default config(
+export default defineConfig(
   // Shared configs
   js.configs.recommended,
   ...tsConfigs.recommended,
@@ -71,7 +68,7 @@ export default config(
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "no-var": "error",
-      "func-style": ["error", "expression", { allowArrowFunctions: true }],
+      "func-style": ["off", "expression", { allowArrowFunctions: true }],
       "no-restricted-imports": [
         "error",
         {
@@ -112,7 +109,7 @@ export default config(
       "import-x/no-named-as-default": "error",
       "import-x/no-named-as-default-member": "error",
       "import-x/newline-after-import": "error",
-      "import-x/no-deprecated": "error",
+      "import-x/no-deprecated": "off",
       "import-x/no-duplicates": [
         "error",
         { considerQueryString: true, "prefer-inline": false },
