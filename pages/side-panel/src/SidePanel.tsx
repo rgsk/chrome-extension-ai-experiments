@@ -1,4 +1,4 @@
-import type { MessageFromServiceWorkerToSidepanel } from "@extension/shared";
+import type { MessageFromServiceWorkerToSidePanelPayload } from "@extension/shared";
 import { withErrorBoundary, withSuspense } from "@extension/shared";
 import { ErrorDisplay, LoadingSpinner } from "@extension/ui";
 import type {
@@ -66,7 +66,7 @@ const SidePanel = () => {
   }, [onMessageFromIframe]);
 
   const onMessageFromServiceWorker = useCallback(
-    (payload: MessageFromServiceWorkerToSidepanel) => {
+    (payload: MessageFromServiceWorkerToSidePanelPayload) => {
       switch (payload.type) {
         case "TAB_ACTIVATED": {
           const { tab } = payload.body;

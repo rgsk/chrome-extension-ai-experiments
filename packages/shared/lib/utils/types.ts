@@ -14,7 +14,7 @@ export type ExcludeValuesFromBaseArrayType<
 > = Exclude<TupleToUnion<B>, TupleToUnion<E>>[];
 export type ManifestType = chrome.runtime.ManifestV3;
 
-export type MessageFromServiceWorkerToSidepanel =
+export type MessageFromServiceWorkerToSidePanelPayload =
   | {
       type: "TAB_ACTIVATED";
       body: {
