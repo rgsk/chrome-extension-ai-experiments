@@ -68,7 +68,9 @@ const SidePanel = () => {
           if (tab.url) {
             sendMessageToIframe({
               type: "TAB_URL_CHANGED",
-              body: { tabUrl: tab.url },
+              body: {
+                tabDetails: { url: tab.url, favIconUrl: tab.favIconUrl },
+              },
             });
           }
           break;
@@ -78,7 +80,9 @@ const SidePanel = () => {
           if (tab.url) {
             sendMessageToIframe({
               type: "TAB_URL_CHANGED",
-              body: { tabUrl: tab.url },
+              body: {
+                tabDetails: { url: tab.url, favIconUrl: tab.favIconUrl },
+              },
             });
           }
           break;
@@ -103,7 +107,9 @@ const SidePanel = () => {
         if (tab?.url) {
           sendMessageToIframe({
             type: "TAB_URL_CHANGED",
-            body: { tabUrl: tab.url },
+            body: {
+              tabDetails: { url: tab.url, favIconUrl: tab.favIconUrl },
+            },
           });
         }
       });
@@ -111,17 +117,10 @@ const SidePanel = () => {
   }, [iframeState.connectionActive, sendMessageToIframe]);
   return (
     <div className="h-screen">
-      <button
-        onClick={() => {
-          sendMessageToIframe({ type: "TEST", body: { chatId } });
-        }}
-      >
-        send
-      </button>
       <iframe
         ref={iframeRef}
         title="React AI Experiments"
-        src={`http://localhost:5173/practice`}
+        src={`http://localhost:5173/chat/${chatId}`}
         className="w-full h-full"
       ></iframe>
     </div>
