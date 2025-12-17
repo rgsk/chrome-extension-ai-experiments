@@ -1,4 +1,3 @@
-import { MessageFromServiceWorkerToSidePanelPayload } from "@extension/shared";
 import { exampleThemeStorage } from "@extension/storage";
 import "webextension-polyfill";
 
@@ -19,29 +18,4 @@ chrome.commands.onCommand.addListener((command) => {
       }
     });
   }
-});
-
-const sendMessageToSidepanel = (
-  payload: MessageFromServiceWorkerToSidePanelPayload,
-) => {
-  chrome.runtime.sendMessage({
-    type: "message-from-service_worker-to-side_panel",
-    payload,
-  });
-};
-
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-  const tab = await chrome.tabs.get(activeInfo.tabId);
-
-  sendMessageToSidepanel({
-    type: "TAB_ACTIVATED",
-    body: { tab },
-  });
-});
-
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  sendMessageToSidepanel({
-    type: "TAB_UPDATED",
-    body: { tab },
-  });
 });

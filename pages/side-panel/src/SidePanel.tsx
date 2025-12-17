@@ -1,4 +1,3 @@
-import type { MessageFromServiceWorkerToSidePanelPayload } from "@extension/shared";
 import { withErrorBoundary, withSuspense } from "@extension/shared";
 import { ErrorDisplay, LoadingSpinner } from "@extension/ui";
 import type {
@@ -111,49 +110,6 @@ const SidePanel = () => {
     });
   }, [onMessageFromIframe]);
 
-  const onMessageFromServiceWorker = useCallback(
-    async (payload: MessageFromServiceWorkerToSidePanelPayload) => {
-      switch (payload.type) {
-        case "TAB_ACTIVATED": {
-          const { tab } = payload.body;
-          const tabDetails = getTabDetails(tab);
-          if (tabDetails) {
-            sendMessageToIframe({
-              type: "TAB_URL_CHANGED",
-              body: {
-                tabDetails,
-              },
-            });
-          }
-          break;
-        }
-        case "TAB_UPDATED": {
-          const { tab } = payload.body;
-          const tabDetails = getTabDetails(tab);
-          if (tabDetails) {
-            sendMessageToIframe({
-              type: "TAB_URL_CHANGED",
-              body: {
-                tabDetails,
-              },
-            });
-          }
-          break;
-        }
-      }
-    },
-    [sendMessageToIframe],
-  );
-
-  useEffect(() => {
-    chrome.runtime.onMessage.addListener((message) => {
-      if (message.type === "message-from-service_worker-to-side_panel") {
-        const payload = message.payload;
-        onMessageFromServiceWorker(payload);
-      }
-    });
-  }, [onMessageFromServiceWorker]);
-
   useEffect(() => {
     if (iframeState.connectionActive) {
       chrome.tabs.query(
@@ -172,10 +128,46 @@ const SidePanel = () => {
           }
         },
       );
+      chrome.tabs.onActivated.addListener(async (activeInfo) => {
+        const tab = await chrome.tabs.get(activeInfo.tabId);
+        const tabDetails = getTabDetails(tab);
+        if (tabDetails) {
+          sendMessageToIframe({
+            type: "TAB_URL_CHANGED",
+            body: {
+              tabDetails,
+            },
+          });
+        }
+      });
+
+      chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+        const tabDetails = getTabDetails(tab);
+        if (tabDetails) {
+          sendMessageToIframe({
+            type: "TAB_URL_CHANGED",
+            body: {
+              tabDetails,
+            },
+          });
+        }
+      });
     }
   }, [iframeState.connectionActive, sendMessageToIframe]);
+
   return (
     <div className="h-screen">
+      <button
+        onClick={() => {
+          // @ts-ignore
+          chrome.tabs.captureVisibleTab(null, { format: "png" }, (dataUrl) => {
+            // dataUrl is a base64 image
+            console.log(dataUrl);
+          });
+        }}
+      >
+        press me
+      </button>
       <iframe
         ref={iframeRef}
         title="React AI Experiments"
