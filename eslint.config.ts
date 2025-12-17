@@ -66,6 +66,7 @@ export default defineConfig(
       "prefer-const": "off",
       "no-empty": "off",
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
       // custom end
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
@@ -79,7 +80,7 @@ export default defineConfig(
             "Please import from `@extension/shared` instead of `type-fest`.",
         },
       ],
-      "arrow-body-style": ["error", "as-needed"],
+      "arrow-body-style": ["off", "as-needed"],
       "@typescript-eslint/consistent-type-imports": "off",
       "@typescript-eslint/consistent-type-exports": "error",
       "import-x/order": [

@@ -20,6 +20,15 @@ const getInnerTextForTab = async (tabId: number) => {
   const innerText = result[0]?.result ?? "";
   return innerText;
 };
+const getTabScreenshotDataUrl = () => {
+  return new Promise<string>((resolve) => {
+    // @ts-ignore
+    chrome.tabs.captureVisibleTab(null, { format: "png" }, (dataUrl) => {
+      // dataUrl is a base64 image
+      resolve(dataUrl);
+    });
+  });
+};
 
 const getTabDetails = (tab: chrome.tabs.Tab) => {
   if (tab.url && tab.id) {
@@ -92,6 +101,19 @@ const SidePanel = () => {
           );
           break;
         }
+        case "GET_TAB_SCREENSHOT_DATA_URL": {
+          const dataUrl = await getTabScreenshotDataUrl();
+          sendMessageToIframe(
+            {
+              type: "GET_TAB_SCREENSHOT_DATA_URL",
+              body: {
+                dataUrl,
+              },
+            },
+            requestResponseId,
+          );
+          break;
+        }
       }
     },
     [sendMessageToIframe],
@@ -157,17 +179,6 @@ const SidePanel = () => {
 
   return (
     <div className="h-screen">
-      <button
-        onClick={() => {
-          // @ts-ignore
-          chrome.tabs.captureVisibleTab(null, { format: "png" }, (dataUrl) => {
-            // dataUrl is a base64 image
-            console.log(dataUrl);
-          });
-        }}
-      >
-        press me
-      </button>
       <iframe
         ref={iframeRef}
         title="React AI Experiments"

@@ -30,6 +30,10 @@ export type MessageFromExtensionToIframePayload =
       body: {
         innerHTML: string;
       };
+    }
+  | {
+      type: "GET_TAB_SCREENSHOT_DATA_URL";
+      body: { dataUrl: string };
     };
 
 export type MessageFromIframeToExtensionPayload =
@@ -46,6 +50,10 @@ export type MessageFromIframeToExtensionPayload =
       body: {
         name: string;
       };
+    }
+  | {
+      type: "GET_TAB_SCREENSHOT_DATA_URL";
+      body: {};
     };
 
 export type RequestResponseTypes = Extract<
