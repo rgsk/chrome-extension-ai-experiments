@@ -4,7 +4,14 @@ import "@src/SidePanel.css";
 import { useEffect, useMemo } from "react";
 import { v4 } from "uuid";
 
-chrome.runtime.connect({ name: "mySidepanel" });
+const port = chrome.runtime.connect({ name: "mySidepanel" });
+
+chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+  if (tab?.id) {
+    port.postMessage({ type: "init", tabId: tab.id });
+  }
+});
+
 const sendResponseToIframe = (payload: unknown) => {
   const iframe = document.querySelector("iframe");
 

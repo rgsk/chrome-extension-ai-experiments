@@ -1,3 +1,4 @@
+/* eslint-disable func-style */
 import { exampleThemeStorage } from "@extension/storage";
 import "webextension-polyfill";
 
@@ -10,38 +11,79 @@ console.log(
   "Edit 'chrome-extension/src/background/index.ts' and save to reload.",
 );
 
-let sidePanelOpen = false;
+const sidePanelOpenByTab = new Map<number, boolean>();
 
-chrome.runtime.onConnect.addListener(function (port) {
-  if (port.name === "mySidepanel") {
-    sidePanelOpen = true;
-    port.onDisconnect.addListener(async () => {
-      sidePanelOpen = false;
-    });
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== "mySidepanel") return;
+
+  let tabId: number | undefined;
+
+  port.onMessage.addListener((msg) => {
+    tabId = msg.tabId;
+    activeTabId = tabId;
+    console.log({ "msg.tabId": msg.tabId });
+    if (msg.type === "init" && typeof tabId === "number") {
+      sidePanelOpenByTab.set(tabId, true);
+    }
+  });
+
+  port.onDisconnect.addListener(() => {
+    if (typeof tabId === "number") {
+      sidePanelOpenByTab.set(tabId, false);
+    }
+  });
+});
+
+let activeTabId: number | undefined;
+let activeWindowId: number | undefined;
+
+async function updateActiveTab() {
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    lastFocusedWindow: true,
+  });
+  activeTabId = tab?.id;
+  activeWindowId = tab?.windowId;
+}
+
+// Initial load
+chrome.runtime.onStartup.addListener(updateActiveTab);
+chrome.runtime.onInstalled.addListener(updateActiveTab);
+
+// Tab changes
+chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
+  activeTabId = tabId;
+  activeWindowId = windowId;
+});
+
+// Window focus changes
+chrome.windows.onFocusChanged.addListener((windowId) => {
+  if (windowId !== chrome.windows.WINDOW_ID_NONE) {
+    updateActiveTab();
   }
 });
 
-// workaround answer
-// https://stackoverflow.com/questions/77213045/error-sidepanel-open-may-only-be-called-in-response-to-a-user-gesture-re#:~:text=The%20workaround%20for,Copy
-let activeTabId: number | undefined;
-// keep alive, see stackoverflow.com/a/66618269
-setInterval(chrome.runtime.getPlatformInfo, 25e3);
-chrome.runtime.onStartup.addListener(async () => {
-  activeTabId = (
-    await chrome.tabs.query({ active: true, currentWindow: true })
-  )[0]?.id;
-});
-chrome.tabs.onActivated.addListener((info) => {
-  activeTabId = info.tabId;
-});
+async function closeAllSidePanels() {
+  const tabs = await chrome.tabs.query({});
+
+  for (const tab of tabs) {
+    if (!tab.id) continue;
+
+    chrome.sidePanel.setOptions({
+      tabId: tab.id,
+      enabled: false,
+    });
+  }
+}
 
 chrome.commands.onCommand.addListener((command) => {
   if (command === "toggle-sidepanel") {
-    if (sidePanelOpen) {
-      chrome.sidePanel.setOptions({
-        tabId: activeTabId,
-        enabled: false,
-      });
+    if (activeTabId !== undefined && sidePanelOpenByTab.get(activeTabId)) {
+      // chrome.sidePanel.setOptions({
+      //   tabId: activeTabId,
+      //   enabled: false,
+      // });
+      closeAllSidePanels();
     } else {
       if (activeTabId) {
         // after tab change this method will continue to work always
@@ -52,8 +94,9 @@ chrome.commands.onCommand.addListener((command) => {
             path: "side-panel/index.html",
           },
           () => {
-            // @ts-expect-error
-            chrome.sidePanel.open({ tabId: activeTabId });
+            if (activeTabId) {
+              chrome.sidePanel.open({ tabId: activeTabId });
+            }
           },
         );
       } else {
