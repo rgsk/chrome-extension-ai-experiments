@@ -179,7 +179,7 @@ const SidePanel = () => {
       <iframe
         ref={iframeRef}
         title="React AI Experiments"
-        src={`${REACT_EXPERIMENTS_URL}/practice`}
+        src={`${REACT_EXPERIMENTS_URL}/chat/${chatId}`}
         className="w-full h-full"
       ></iframe>
     </div>
