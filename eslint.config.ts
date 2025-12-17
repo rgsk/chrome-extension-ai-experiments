@@ -14,6 +14,7 @@ export default defineConfig(
   js.configs.recommended,
   ...tsConfigs.recommended,
   jsxA11y.flatConfigs.recommended,
+  // @ts-expect-error
   importXFlatConfig.recommended,
   importXFlatConfig.typescript,
   // eslintPluginPrettierRecommended,
