@@ -1,5 +1,10 @@
+import type { MessageFromServiceWorkerToSidepanel } from "@extension/shared";
 import { withErrorBoundary, withSuspense } from "@extension/shared";
 import { ErrorDisplay, LoadingSpinner } from "@extension/ui";
+import type {
+  MessageFromExtensionToIframePayload,
+  MessageFromIframeToExtensionPayload,
+} from "@src/payloadTypes";
 import "@src/SidePanel.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 } from "uuid";
@@ -13,7 +18,7 @@ const SidePanel = () => {
     connectionActive: boolean;
   }>({ connectionActive: false });
   const sendMessageToIframe = useCallback(
-    (payload: { type: string; body: Record<string, unknown> }) => {
+    (payload: MessageFromExtensionToIframePayload) => {
       const iframe = iframeRef.current;
       if (iframe && iframe.contentWindow) {
         iframe.contentWindow.postMessage(
@@ -29,10 +34,10 @@ const SidePanel = () => {
   );
 
   const onMessageFromIframe = useCallback(
-    (payload: { type: string; body: Record<string, unknown> }) => {
+    (payload: MessageFromIframeToExtensionPayload) => {
       switch (payload.type) {
         case "PING": {
-          const { message } = payload.body as { message: string };
+          const { message } = payload.body;
           setIframeState((prev) => ({ ...prev, connectionActive: true }));
           sendMessageToIframe({
             type: "PONG",
@@ -61,7 +66,7 @@ const SidePanel = () => {
   }, [onMessageFromIframe]);
 
   const onMessageFromServiceWorker = useCallback(
-    (payload: { type: string; body: Record<string, unknown> }) => {
+    (payload: MessageFromServiceWorkerToSidepanel) => {
       switch (payload.type) {
         case "TAB_ACTIVATED": {
           const { tab } = payload.body as { tab: chrome.tabs.Tab };

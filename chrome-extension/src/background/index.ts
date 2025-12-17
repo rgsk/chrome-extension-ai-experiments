@@ -1,3 +1,4 @@
+import type { MessageFromServiceWorkerToSidepanel } from "@extension/shared";
 import { exampleThemeStorage } from "@extension/storage";
 import "webextension-polyfill";
 
@@ -20,10 +21,9 @@ chrome.commands.onCommand.addListener((command) => {
   }
 });
 
-const sendMessageToSidepanel = (payload: {
-  type: string;
-  body: Record<string, unknown>;
-}) => {
+const sendMessageToSidepanel = (
+  payload: MessageFromServiceWorkerToSidepanel,
+) => {
   chrome.runtime.sendMessage({
     type: "message-from-service_worker-to-side_panel",
     payload,
