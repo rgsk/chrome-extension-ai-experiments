@@ -31,6 +31,32 @@ const getTabScreenshotDataUrl = () => {
   });
 };
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function captureFullPage(tabId: number) {
+  const dims = await chrome.tabs.sendMessage(tabId, {
+    type: "PAGE_DIMENSIONS",
+  });
+
+  const screenshots: string[] = [];
+  let y = 0;
+
+  while (y < dims.height) {
+    await chrome.tabs.sendMessage(tabId, { type: "SCROLL_TO", y });
+    // wait for layout + lazy content
+    await sleep(1);
+    // @ts-ignore
+    const dataUrl = await chrome.tabs.captureVisibleTab(null, {
+      format: "png",
+    });
+    // @ts-ignore
+    screenshots.push(dataUrl);
+    y += dims.viewportHeight;
+  }
+
+  return { screenshots, pageWidth: dims.width, pageHeight: dims.height };
+}
+
 const getTabDetails = (tab: chrome.tabs.Tab) => {
   if (tab.url && tab.id) {
     const tabDetails: TabDetails = {
@@ -121,6 +147,28 @@ const SidePanel = () => {
         case "COPY_TO_CLIPBOARD": {
           const { text } = payload.body;
           copyRef.current(text);
+          break;
+        }
+        case "GET_FULL_PAGE_SCREENSHOTS": {
+          chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+            if (tab?.id) {
+              captureFullPage(tab.id).then(
+                ({ screenshots, pageWidth, pageHeight }) => {
+                  sendMessageToIframe(
+                    {
+                      type: "GET_FULL_PAGE_SCREENSHOTS",
+                      body: {
+                        screenshots,
+                        pageWidth,
+                        pageHeight,
+                      },
+                    },
+                    requestResponseId,
+                  );
+                },
+              );
+            }
+          });
           break;
         }
       }

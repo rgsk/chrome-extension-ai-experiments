@@ -34,6 +34,10 @@ export type MessageFromExtensionToIframePayload =
   | {
       type: "GET_TAB_SCREENSHOT_DATA_URL";
       body: { dataUrl: string };
+    }
+  | {
+      type: "GET_FULL_PAGE_SCREENSHOTS";
+      body: { screenshots: string[]; pageWidth: number; pageHeight: number };
     };
 
 export type MessageFromIframeToExtensionPayload =
@@ -60,6 +64,10 @@ export type MessageFromIframeToExtensionPayload =
       body: {
         text: string;
       };
+    }
+  | {
+      type: "GET_FULL_PAGE_SCREENSHOTS";
+      body: {};
     };
 
 export type RequestResponseTypes = Extract<
