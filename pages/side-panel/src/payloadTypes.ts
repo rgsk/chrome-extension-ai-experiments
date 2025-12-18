@@ -54,6 +54,12 @@ export type MessageFromIframeToExtensionPayload =
   | {
       type: "GET_TAB_SCREENSHOT_DATA_URL";
       body: {};
+    }
+  | {
+      type: "COPY_TO_CLIPBOARD";
+      body: {
+        text: string;
+      };
     };
 
 export type RequestResponseTypes = Extract<

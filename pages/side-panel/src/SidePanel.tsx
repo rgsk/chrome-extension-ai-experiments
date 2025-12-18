@@ -1,5 +1,6 @@
 import { withErrorBoundary, withSuspense } from "@extension/shared";
 import { ErrorDisplay, LoadingSpinner } from "@extension/ui";
+import useCopyToClipboard from "@src/hooks/useCopyToClipboard";
 import type {
   MessageFromExtensionToIframePayload,
   MessageFromIframeToExtensionPayload,
@@ -45,6 +46,9 @@ const getTabDetails = (tab: chrome.tabs.Tab) => {
 
 const SidePanel = () => {
   const chatId = useMemo(() => v4(), []);
+  const { copy } = useCopyToClipboard();
+  const copyRef = useRef(copy);
+  copyRef.current = copy;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeState, setIframeState] = useState<{
     connectionActive: boolean;
@@ -112,6 +116,11 @@ const SidePanel = () => {
             },
             requestResponseId,
           );
+          break;
+        }
+        case "COPY_TO_CLIPBOARD": {
+          const { text } = payload.body;
+          copyRef.current(text);
           break;
         }
       }
