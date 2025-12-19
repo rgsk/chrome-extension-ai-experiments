@@ -177,7 +177,7 @@ const SidePanel = () => {
   );
 
   useEffect(() => {
-    window.addEventListener("message", (event) => {
+    const handler = (event: MessageEvent<any>) => {
       // 🔒 SECURITY CHECK
       if (event.origin !== iframeOrigin) return;
 
@@ -186,29 +186,17 @@ const SidePanel = () => {
         const requestResponseId = event.data.requestResponseId;
         onMessageFromIframe(payload, requestResponseId);
       }
-    });
+    };
+    window.addEventListener("message", handler);
+    return () => {
+      window.removeEventListener("message", handler);
+    };
   }, [onMessageFromIframe]);
 
   useEffect(() => {
-    if (iframeState.connectionActive) {
-      chrome.tabs.query(
-        { active: true, currentWindow: true },
-        async ([tab]) => {
-          if (tab) {
-            const tabDetails = getTabDetails(tab);
-            if (tabDetails) {
-              sendMessageToIframe({
-                type: "TAB_URL_CHANGED",
-                body: {
-                  tabDetails,
-                },
-              });
-            }
-          }
-        },
-      );
-      chrome.tabs.onActivated.addListener(async (activeInfo) => {
-        const tab = await chrome.tabs.get(activeInfo.tabId);
+    if (!iframeState.connectionActive) return;
+    chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
+      if (tab) {
         const tabDetails = getTabDetails(tab);
         if (tabDetails) {
           sendMessageToIframe({
@@ -218,20 +206,45 @@ const SidePanel = () => {
             },
           });
         }
-      });
+      }
+    });
+    const handleTabActivated: (
+      activeInfo: chrome.tabs.TabActiveInfo,
+    ) => void = async (activeInfo) => {
+      const tab = await chrome.tabs.get(activeInfo.tabId);
+      const tabDetails = getTabDetails(tab);
+      if (tabDetails) {
+        sendMessageToIframe({
+          type: "TAB_URL_CHANGED",
+          body: {
+            tabDetails,
+          },
+        });
+      }
+    };
+    const handleTabUpdated: (
+      tabId: number,
+      changeInfo: chrome.tabs.TabChangeInfo,
+      tab: chrome.tabs.Tab,
+    ) => void = (tabId, changeInfo, tab) => {
+      const tabDetails = getTabDetails(tab);
+      if (tabDetails) {
+        sendMessageToIframe({
+          type: "TAB_URL_CHANGED",
+          body: {
+            tabDetails,
+          },
+        });
+      }
+    };
 
-      chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-        const tabDetails = getTabDetails(tab);
-        if (tabDetails) {
-          sendMessageToIframe({
-            type: "TAB_URL_CHANGED",
-            body: {
-              tabDetails,
-            },
-          });
-        }
-      });
-    }
+    chrome.tabs.onActivated.addListener(handleTabActivated);
+    chrome.tabs.onUpdated.addListener(handleTabUpdated);
+
+    return () => {
+      chrome.tabs.onActivated.removeListener(handleTabActivated);
+      chrome.tabs.onUpdated.removeListener(handleTabUpdated);
+    };
   }, [iframeState.connectionActive, sendMessageToIframe]);
 
   return (
