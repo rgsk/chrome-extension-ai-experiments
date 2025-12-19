@@ -52,19 +52,3 @@ export interface ThemeStateType {
 export type ThemeStorageType = BaseStorageType<ThemeStateType> & {
   toggle: () => Promise<void>;
 };
-
-/**
- * State shape
- */
-export interface SharedStateType {
-  hideMyStuff: boolean;
-  hideRecents: boolean;
-}
-
-/**
- * Storage API type
- */
-export type SharedStorageType = BaseStorageType<SharedStateType> & {
-  toggleHideMyStuff: () => Promise<void>;
-  toggleHideRecents: () => Promise<void>;
-};

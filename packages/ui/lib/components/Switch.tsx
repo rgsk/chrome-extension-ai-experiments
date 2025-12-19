@@ -1,3 +1,7 @@
+import { cn } from "@/lib/utils";
+import { useStorage } from "@extension/shared";
+import { exampleThemeStorage } from "@extension/storage";
+
 type SwitchProps = {
   checked: boolean;
   onChange?: (checked: boolean) => void;
@@ -5,6 +9,7 @@ type SwitchProps = {
 };
 
 export const Switch: React.FC<SwitchProps> = ({ checked, onChange, label }) => {
+  const { isLight } = useStorage(exampleThemeStorage);
   return (
     <label className="inline-flex items-center cursor-pointer gap-3">
       <span className="relative">
@@ -31,7 +36,14 @@ export const Switch: React.FC<SwitchProps> = ({ checked, onChange, label }) => {
       </span>
 
       {label && (
-        <span className="text-sm font-medium text-gray-700">{label}</span>
+        <span
+          className={cn(
+            "text-sm font-medium",
+            isLight ? "text-black" : "text-white",
+          )}
+        >
+          {label}
+        </span>
       )}
     </label>
   );

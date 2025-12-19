@@ -25,7 +25,7 @@ const notificationOptions = {
 
 const Popup = () => {
   const { isLight } = useStorage(exampleThemeStorage);
-  const { hideMyStuff } = useStorage(sharedStorage);
+  const { gemini } = useStorage(sharedStorage);
   const logo = isLight
     ? "popup/logo_vertical.svg"
     : "popup/logo_vertical_dark.svg";
@@ -74,13 +74,23 @@ const Popup = () => {
     <div className={cn("App", isLight ? "bg-slate-50" : "bg-gray-800")}>
       {tabOrigin === "https://gemini.google.com" ? (
         <>
-          <Switch
-            checked={hideMyStuff}
-            onChange={(checked) => {
-              sharedStorage.toggleHideMyStuff();
-            }}
-            label="Hide my-stuff-recents-preview"
-          />
+          <div className="flex flex-col">
+            <Switch
+              checked={gemini.hideMyStuffRecentsPreview}
+              onChange={(checked) => {
+                sharedStorage.set((prev) => {
+                  return {
+                    ...prev,
+                    gemini: {
+                      ...prev.gemini,
+                      hideMyStuffRecentsPreview: checked,
+                    },
+                  };
+                });
+              }}
+              label="Hide: Recents Preview"
+            />
+          </div>
         </>
       ) : (
         <header
