@@ -19,3 +19,27 @@ chrome.runtime.onMessage.addListener((msg, _, sendResponse) => {
     return true;
   }
 });
+
+if (window.origin === "https://gemini.google.com") {
+  const hideRecents = () => {
+    const el = document.querySelector(
+      "my-stuff-recents-preview",
+    ) as HTMLElement;
+    if (el) {
+      el.style.display = "none";
+    }
+  };
+
+  // run once in case it already exists
+  hideRecents();
+
+  // watch for future DOM changes
+  const observer = new MutationObserver(() => {
+    hideRecents();
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+}

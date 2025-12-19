@@ -94,6 +94,8 @@ const Popup = () => {
           Open Sidepanel
         </button>
       </header>
+
+      <p className="text-red-400">Hide my-stuff-recents-preview</p>
     </div>
   );
 };
