@@ -1,4 +1,4 @@
-import type { StorageEnum } from './index.js';
+import type { StorageEnum } from "./index.js";
 
 export type ValueOrUpdateType<D> = D | ((prev: D) => Promise<D> | D);
 
@@ -45,10 +45,26 @@ export type StorageConfigType<D = string> = {
 };
 
 export interface ThemeStateType {
-  theme: 'light' | 'dark';
+  theme: "light" | "dark";
   isLight: boolean;
 }
 
 export type ThemeStorageType = BaseStorageType<ThemeStateType> & {
   toggle: () => Promise<void>;
+};
+
+/**
+ * State shape
+ */
+export interface SharedStateType {
+  hideMyStuff: boolean;
+  hideRecents: boolean;
+}
+
+/**
+ * Storage API type
+ */
+export type SharedStorageType = BaseStorageType<SharedStateType> & {
+  toggleHideMyStuff: () => Promise<void>;
+  toggleHideRecents: () => Promise<void>;
 };

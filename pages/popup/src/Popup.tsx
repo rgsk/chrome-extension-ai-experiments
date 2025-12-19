@@ -5,9 +5,16 @@ import {
   withErrorBoundary,
   withSuspense,
 } from "@extension/shared";
-import { exampleThemeStorage } from "@extension/storage";
-import { cn, ErrorDisplay, LoadingSpinner, ToggleButton } from "@extension/ui";
+import { exampleThemeStorage, sharedStorage } from "@extension/storage";
+import {
+  cn,
+  ErrorDisplay,
+  LoadingSpinner,
+  Switch,
+  ToggleButton,
+} from "@extension/ui";
 import "@src/Popup.css";
+import { useEffect, useState } from "react";
 
 const notificationOptions = {
   type: "basic",
@@ -18,6 +25,7 @@ const notificationOptions = {
 
 const Popup = () => {
   const { isLight } = useStorage(exampleThemeStorage);
+  const { hideMyStuff } = useStorage(sharedStorage);
   const logo = isLight
     ? "popup/logo_vertical.svg"
     : "popup/logo_vertical_dark.svg";
@@ -52,50 +60,70 @@ const Popup = () => {
     }
   };
 
+  const [tabOrigin, setTabOrigin] = useState<string>();
+
+  useEffect(() => {
+    chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
+      if (tab?.url) {
+        setTabOrigin(new URL(tab.url).origin);
+      }
+    });
+  }, []);
+
   return (
     <div className={cn("App", isLight ? "bg-slate-50" : "bg-gray-800")}>
-      <header
-        className={cn(
-          "App-header",
-          isLight ? "text-gray-900" : "text-gray-100",
-        )}
-      >
-        <button onClick={goGithubSite}>
-          <img
-            src={chrome.runtime.getURL(logo)}
-            className="App-logo"
-            alt="logo"
+      {tabOrigin === "https://gemini.google.com" ? (
+        <>
+          <Switch
+            checked={hideMyStuff}
+            onChange={(checked) => {
+              sharedStorage.toggleHideMyStuff();
+            }}
+            label="Hide my-stuff-recents-preview"
           />
-        </button>
-        <p>
-          Edit <code>pages/popup/src/Popup.tsx</code>
-        </p>
-        <button
+        </>
+      ) : (
+        <header
           className={cn(
-            "mt-4 rounded px-4 py-1 font-bold shadow hover:scale-105",
-            isLight ? "bg-blue-200 text-black" : "bg-gray-700 text-white",
+            "App-header",
+            isLight ? "text-gray-900" : "text-gray-100",
           )}
-          onClick={injectContentScript}
         >
-          {t("injectButton")}
-        </button>
-        <ToggleButton>{t("toggleTheme")}</ToggleButton>
-        <button
-          onClick={async () => {
-            const [tab] = await chrome.tabs.query({
-              currentWindow: true,
-              active: true,
-            });
-            if (tab?.id) {
-              await chrome.sidePanel.open({ tabId: tab.id });
-            }
-          }}
-        >
-          Open Sidepanel
-        </button>
-      </header>
-
-      <p className="text-red-400">Hide my-stuff-recents-preview</p>
+          <button onClick={goGithubSite}>
+            <img
+              src={chrome.runtime.getURL(logo)}
+              className="App-logo"
+              alt="logo"
+            />
+          </button>
+          <p>
+            Edit <code>pages/popup/src/Popup.tsx</code>
+          </p>
+          <button
+            className={cn(
+              "mt-4 rounded px-4 py-1 font-bold shadow hover:scale-105",
+              isLight ? "bg-blue-200 text-black" : "bg-gray-700 text-white",
+            )}
+            onClick={injectContentScript}
+          >
+            {t("injectButton")}
+          </button>
+          <ToggleButton>{t("toggleTheme")}</ToggleButton>
+          <button
+            onClick={async () => {
+              const [tab] = await chrome.tabs.query({
+                currentWindow: true,
+                active: true,
+              });
+              if (tab?.id) {
+                await chrome.sidePanel.open({ tabId: tab.id });
+              }
+            }}
+          >
+            Open Sidepanel
+          </button>
+        </header>
+      )}
     </div>
   );
 };

@@ -1,3 +1,4 @@
+import { sharedStorage } from "@extension/storage";
 import { sampleFunction } from "@src/sample-function";
 
 console.log("[CEB] All content script loaded");
@@ -20,13 +21,16 @@ chrome.runtime.onMessage.addListener((msg, _, sendResponse) => {
   }
 });
 
-if (window.origin === "https://gemini.google.com") {
-  const hideRecents = () => {
+if (window.location.origin === "https://gemini.google.com") {
+  const hideRecents = async () => {
     const el = document.querySelector(
       "my-stuff-recents-preview",
     ) as HTMLElement;
     if (el) {
-      el.style.display = "none";
+      const { hideMyStuff } = await sharedStorage.get();
+      if (hideMyStuff) {
+        el.style.display = "none";
+      }
     }
   };
 
