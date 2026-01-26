@@ -35,9 +35,12 @@ export default defineConfig({
   build: {
     lib: {
       name: 'BackgroundScript',
-      fileName: 'background',
+      fileName: (_format, entryName) => `${entryName}.js`,
       formats: ['es'],
-      entry: resolve(srcDir, 'background', 'index.ts'),
+      entry: {
+        background: resolve(srcDir, 'background', 'index.ts'),
+        offscreen: resolve(srcDir, 'offscreen', 'index.ts'),
+      },
     },
     outDir,
     emptyOutDir: false,

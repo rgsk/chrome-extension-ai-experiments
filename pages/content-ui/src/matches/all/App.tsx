@@ -80,7 +80,16 @@ export default function App() {
           icon.addEventListener("click", (e) => {
             console.log("Audio icon clicked!");
             console.log("Element:", icon);
-            // 👉 Put your logic here
+            const blockedUrl = lastAudioBlockedUrlRef.current;
+            if (!blockedUrl) {
+              console.warn("No blocked audio URL captured yet.");
+              return;
+            }
+
+            chrome.runtime.sendMessage({
+              type: "play-audio-url",
+              url: blockedUrl,
+            });
           });
 
           console.log("Listener attached to #gdx-bubble-audio-icon");
