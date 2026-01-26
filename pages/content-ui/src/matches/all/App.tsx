@@ -1,11 +1,12 @@
 import { t } from "@extension/i18n";
 import { useStorage } from "@extension/shared";
 import { ToggleButton } from "@extension/ui";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { sharedStorage } from "../../../../../packages/storage/lib";
 
 export default function App() {
   const { gemini } = useStorage(sharedStorage);
+  const lastAudioBlockedUrlRef = useRef("");
   useEffect(() => {
     console.log("[CEB] Content ui all loaded");
   }, []);
@@ -42,6 +43,56 @@ export default function App() {
       return () => {
         observer.disconnect();
       };
+    } else if (window.location.origin === "https://chatgpt.com") {
+      document.addEventListener("securitypolicyviolation", (e) => {
+        lastAudioBlockedUrlRef.current = e.blockedURI;
+        console.log("⚠️ CSP VIOLATION DETECTED:", {
+          blockedURI: e.blockedURI,
+        });
+      });
+      (function waitForBubble() {
+        const host = document.querySelector("#gdx-bubble-host");
+        if (!host) {
+          // The extension injects this later — keep waiting
+          return requestAnimationFrame(waitForBubble);
+        }
+
+        // Shadow root is open, so we can read it directly
+        const shadowRoot = host.shadowRoot;
+        if (!shadowRoot) {
+          return requestAnimationFrame(waitForBubble);
+        }
+
+        const root = shadowRoot;
+        const attached = new WeakSet<Element>();
+
+        function attachListener() {
+          const icon = root.querySelector("#gdx-bubble-audio-icon");
+          if (!icon) {
+            // Bubble content is dynamic — watch for changes
+            return;
+          }
+
+          // Avoid double-binding
+          if (attached.has(icon)) return;
+          attached.add(icon);
+
+          icon.addEventListener("click", (e) => {
+            console.log("Audio icon clicked!");
+            console.log("Element:", icon);
+            // 👉 Put your logic here
+          });
+
+          console.log("Listener attached to #gdx-bubble-audio-icon");
+        }
+
+        // Observe shadow DOM updates
+        const obs = new MutationObserver(attachListener);
+        obs.observe(root, { childList: true, subtree: true });
+
+        // Try attaching right now too
+        attachListener();
+      })();
     }
   }, [gemini.hideMyStuffRecentsPreview]);
   return null;
