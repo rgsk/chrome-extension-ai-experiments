@@ -1,3 +1,4 @@
+import { REACT_EXPERIMENTS_URL } from "@extension/env";
 import { withErrorBoundary, withSuspense } from "@extension/shared";
 import { ErrorDisplay, LoadingSpinner } from "@extension/ui";
 import useCopyToClipboard from "@src/hooks/useCopyToClipboard";
@@ -9,7 +10,6 @@ import type {
 import "@src/SidePanel.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 } from "uuid";
-import { REACT_EXPERIMENTS_URL } from "../../../packages/env/lib";
 
 const iframeOrigin = REACT_EXPERIMENTS_URL;
 
