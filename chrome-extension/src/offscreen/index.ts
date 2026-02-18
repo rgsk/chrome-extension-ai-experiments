@@ -25,13 +25,6 @@ const playBlob = async (blob: Blob) => {
   currentObjectUrl = objectUrl;
   const audio = new Audio(objectUrl);
   currentAudio = audio;
-  audio.addEventListener(
-    "ended",
-    () => {
-      cleanupCurrentAudio();
-    },
-    { once: true },
-  );
   await audio.play();
   return new Promise((resolve) => {
     audio.addEventListener(
@@ -60,16 +53,14 @@ const endOfStreamUint8Array = stringToUint8Array("endOfStream");
 const playStreamingResponse = async (
   reader: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>>,
 ) => {
-  let currentMediaSource = null as MediaSource | null;
+  const mediaSource = new MediaSource();
   const audioQueue: Uint8Array[] = [];
   const appendNextBuffer = (sourceBuffer: SourceBuffer) => {
     if (audioQueue.length > 0 && !sourceBuffer.updating) {
       const nextChunk = audioQueue.shift();
       if (nextChunk) {
         if (arraysEqual(endOfStreamUint8Array, nextChunk)) {
-          if (currentMediaSource) {
-            currentMediaSource.endOfStream();
-          }
+          mediaSource.endOfStream();
         } else {
           sourceBuffer.appendBuffer(nextChunk as any);
         }
@@ -77,9 +68,8 @@ const playStreamingResponse = async (
     }
   };
 
-  currentMediaSource = new MediaSource();
-  currentMediaSource.addEventListener("sourceopen", () => {
-    const sourceBuffer = currentMediaSource.addSourceBuffer("audio/mpeg");
+  mediaSource.addEventListener("sourceopen", () => {
+    const sourceBuffer = mediaSource.addSourceBuffer("audio/mpeg");
     sourceBuffer.addEventListener("updateend", () => {
       appendNextBuffer(sourceBuffer);
     });
@@ -105,7 +95,7 @@ const playStreamingResponse = async (
 
     readStream();
   });
-  const objectUrl = URL.createObjectURL(currentMediaSource);
+  const objectUrl = URL.createObjectURL(mediaSource);
   currentObjectUrl = objectUrl;
   const audio = new Audio(objectUrl);
   currentAudio = audio;
