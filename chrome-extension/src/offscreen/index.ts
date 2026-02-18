@@ -21,7 +21,6 @@ const cleanupCurrentAudio = () => {
 };
 
 const playBlob = async (blob: Blob) => {
-  cleanupCurrentAudio();
   const objectUrl = URL.createObjectURL(blob);
   currentObjectUrl = objectUrl;
   const audio = new Audio(objectUrl);
@@ -34,6 +33,16 @@ const playBlob = async (blob: Blob) => {
     { once: true },
   );
   await audio.play();
+  return new Promise((resolve) => {
+    audio.addEventListener(
+      "ended",
+      () => {
+        cleanupCurrentAudio();
+        resolve(undefined);
+      },
+      { once: true },
+    );
+  });
 };
 
 function arraysEqual(arr1: Uint8Array, arr2: Uint8Array): boolean {
@@ -96,15 +105,29 @@ const playStreamingResponse = async (
 
     readStream();
   });
-  const audioPlayer = new Audio();
-  audioPlayer.src = URL.createObjectURL(currentMediaSource);
-  audioPlayer.play();
+  const objectUrl = URL.createObjectURL(currentMediaSource);
+  currentObjectUrl = objectUrl;
+  const audio = new Audio(objectUrl);
+  currentAudio = audio;
+
+  await audio.play();
+  return new Promise((resolve) => {
+    audio.addEventListener(
+      "ended",
+      () => {
+        cleanupCurrentAudio();
+        resolve(undefined);
+      },
+      { once: true },
+    );
+  });
 };
 
 chrome.runtime.onMessage.addListener((message) => {
   if (!message || typeof message.type !== "string") return;
 
   if (message.type === "offscreen-play") {
+    cleanupCurrentAudio();
     const url = message.url;
     if (!url || typeof url !== "string") return;
 
@@ -124,32 +147,39 @@ chrome.runtime.onMessage.addListener((message) => {
         return response.blob().then((blob) => playBlob(blob));
       })
       .catch((error) => {
-        if (error?.name !== "AbortError") {
-          console.error("Offscreen audio playback failed:", error);
-        }
-      })
-      .finally(() => {
-        if (currentAbort === controller) currentAbort = null;
+        console.error("Offscreen audio playback failed:", error);
       });
-    return;
-  }
-
-  if (message.type === "offscreen-tts") {
+  } else if (message.type === "offscreen-tts") {
+    cleanupCurrentAudio();
     const text = message.text;
     const voice = message.voice;
     if (!text || typeof text !== "string") return;
+
+    const controller = new AbortController();
+    currentAbort = controller;
 
     fetch("http://localhost:8778/experiments/tts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, voice }),
-    }).then((response) => {
-      const reader = response.body!.getReader();
-      playStreamingResponse(reader);
-    });
-  }
-
-  if (message.type === "offscreen-tts-stop") {
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(
+            "Failed to fetch audio: " +
+              response.status +
+              " " +
+              response.statusText,
+          );
+        }
+        const reader = response.body!.getReader();
+        return playStreamingResponse(reader);
+      })
+      .catch((error) => {
+        console.error("Offscreen audio playback failed:", error);
+      });
+  } else if (message.type === "offscreen-tts-stop") {
     console.log("[Offscreen] Stopping TTS playback.");
     cleanupCurrentAudio();
   }
