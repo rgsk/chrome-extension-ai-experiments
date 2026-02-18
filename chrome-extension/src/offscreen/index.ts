@@ -1,3 +1,5 @@
+import { FASTIFY_SERVER_URL } from "@extension/env";
+
 console.log("[Offscreen] Loaded");
 
 let currentAudio: HTMLAudioElement | null = null;
@@ -148,7 +150,7 @@ chrome.runtime.onMessage.addListener((message) => {
     const controller = new AbortController();
     currentAbort = controller;
 
-    fetch("http://localhost:8778/experiments/tts", {
+    fetch(`${FASTIFY_SERVER_URL}/experiments/tts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, voice }),
