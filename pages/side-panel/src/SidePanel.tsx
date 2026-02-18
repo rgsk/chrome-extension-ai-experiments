@@ -31,6 +31,15 @@ const getTabScreenshotDataUrl = () => {
   });
 };
 
+const getSelectedTextForTab = async (tabId: number) => {
+  const result = await chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    func: () => window.getSelection?.()?.toString() ?? "",
+  });
+  const selectedText = result[0]?.result ?? "";
+  return selectedText;
+};
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function captureFullPage(tabId: number) {
@@ -70,9 +79,6 @@ const getTabDetails = (tab: chrome.tabs.Tab) => {
   return null;
 };
 
-const bigText =
-  "A striking phenomenon associated with dinoflagellates is bioluminescence. Some species, such as Noctiluca, produce a mesmerizing glow in ocean waters (Figure below) at night due to biochemical reactions within their cells. Certain dinoflagellates like Gonyaulax can multiply rapidly under favourable conditions, causing red tides (Figure below), where the water appears reddish due to their large populations. These blooms can release toxins harmful to marine life and even humans who consume contaminated seafood.";
-const smallText = "Hello from the side panel. This is a test of offscreen TTS.";
 const SidePanel = () => {
   const chatId = useMemo(() => v4(), []);
   const { copy } = useCopyToClipboard();
@@ -80,10 +86,18 @@ const SidePanel = () => {
   copyRef.current = copy;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const handlePlayTest = useCallback(() => {
-    chrome.runtime.sendMessage({
-      type: "play-tts",
-      text: bigText,
-      voice: "alloy",
+    chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
+      if (!tab?.id) return;
+      const selectedText = await getSelectedTextForTab(tab.id);
+      if (!selectedText.trim()) {
+        console.warn("No selected text to play.");
+        return;
+      }
+      chrome.runtime.sendMessage({
+        type: "play-tts",
+        text: selectedText,
+        voice: "alloy",
+      });
     });
   }, []);
   const [iframeState, setIframeState] = useState<{
