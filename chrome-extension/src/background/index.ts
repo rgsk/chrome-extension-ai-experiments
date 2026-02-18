@@ -28,21 +28,41 @@ async function ensureOffscreenDocument() {
 }
 
 chrome.runtime.onMessage.addListener((message) => {
-  if (message?.type !== "play-audio-url") return;
-  const url = message?.url;
-  if (!url || typeof url !== "string") {
-    console.warn("play-audio-url message missing url");
+  if (message?.type === "play-audio-url") {
+    const url = message?.url;
+    if (!url || typeof url !== "string") {
+      console.warn("play-audio-url message missing url");
+      return;
+    }
+
+    void ensureOffscreenDocument()
+      .then(() => {
+        console.log("Offscreen document ready, sending play request.");
+        chrome.runtime.sendMessage({ type: "offscreen-play", url });
+      })
+      .catch((error) => {
+        console.error("Failed to create offscreen document:", error);
+      });
     return;
   }
 
-  void ensureOffscreenDocument()
-    .then(() => {
-      console.log("Offscreen document ready, sending play request.");
-      chrome.runtime.sendMessage({ type: "offscreen-play", url });
-    })
-    .catch((error) => {
-      console.error("Failed to create offscreen document:", error);
-    });
+  if (message?.type === "play-tts") {
+    const text = message?.text;
+    const voice = message?.voice;
+    if (!text || typeof text !== "string") {
+      console.warn("play-tts message missing text");
+      return;
+    }
+
+    void ensureOffscreenDocument()
+      .then(() => {
+        console.log("Offscreen document ready, sending TTS request.");
+        chrome.runtime.sendMessage({ type: "offscreen-tts", text, voice });
+      })
+      .catch((error) => {
+        console.error("Failed to create offscreen document:", error);
+      });
+  }
 });
 
 chrome.commands.onCommand.addListener((command) => {
