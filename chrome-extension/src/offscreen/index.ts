@@ -5,6 +5,7 @@ console.log("[Offscreen] Loaded");
 let currentAudio: HTMLAudioElement | null = null;
 let currentObjectUrl: string | null = null;
 let currentAbort: AbortController | null = null;
+let lastTtsText: string | null = null;
 
 const cleanupCurrentAudio = () => {
   if (currentAbort) {
@@ -142,11 +143,18 @@ chrome.runtime.onMessage.addListener((message) => {
         console.error("Offscreen audio playback failed:", error);
       });
   } else if (message.type === "offscreen-tts") {
+    const lastAudioNotFinished = !!currentAudio;
     cleanupCurrentAudio();
     const text = message.text;
     const voice = message.voice;
-    if (!text || typeof text !== "string") return;
-
+    if (
+      !text ||
+      typeof text !== "string" ||
+      (text === lastTtsText && lastAudioNotFinished)
+    ) {
+      return;
+    }
+    lastTtsText = text;
     const controller = new AbortController();
     currentAbort = controller;
 
