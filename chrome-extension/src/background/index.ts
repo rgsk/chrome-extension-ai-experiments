@@ -10,6 +10,8 @@ console.log(
   "Edit 'chrome-extension/src/background/index.ts' and save to reload.",
 );
 
+let lastSelectedTtsText: string | null = null;
+
 async function ensureOffscreenDocument() {
   if (!chrome.offscreen?.createDocument) {
     console.warn("chrome.offscreen is not available in this environment.");
@@ -62,6 +64,18 @@ chrome.runtime.onMessage.addListener((message) => {
       .catch((error) => {
         console.error("Failed to create offscreen document:", error);
       });
+    return;
+  }
+
+  if (message?.type === "offscreen-tts-stop") {
+    void ensureOffscreenDocument()
+      .then(() => {
+        console.log("Offscreen document ready, sending TTS stop request.");
+        chrome.runtime.sendMessage({ type: "offscreen-tts-stop" });
+      })
+      .catch((error) => {
+        console.error("Failed to create offscreen document:", error);
+      });
   }
 });
 
@@ -81,11 +95,26 @@ chrome.commands.onCommand.addListener((command) => {
         func: () => window.getSelection?.()?.toString() ?? "",
       });
       const selectedText = result[0]?.result ?? "";
-      if (!selectedText.trim()) {
-        console.warn("No selected text to play.");
+      const text = selectedText.trim();
+
+      const shouldStop =
+        !text || (lastSelectedTtsText !== null && text === lastSelectedTtsText);
+      if (shouldStop) {
+        void ensureOffscreenDocument()
+          .then(() => {
+            console.log("Offscreen document ready, sending TTS stop request.");
+            chrome.runtime.sendMessage({ type: "offscreen-tts-stop" });
+          })
+          .catch((error) => {
+            console.error("Failed to create offscreen document:", error);
+          });
+        if (!text) {
+          console.warn("No selected text to play.");
+        }
         return;
       }
-      const text = selectedText;
+
+      lastSelectedTtsText = text;
       const voice = "alloy";
       void ensureOffscreenDocument()
         .then(() => {

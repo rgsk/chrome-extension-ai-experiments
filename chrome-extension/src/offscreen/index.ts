@@ -2,8 +2,13 @@ console.log("[Offscreen] Loaded");
 
 let currentAudio: HTMLAudioElement | null = null;
 let currentObjectUrl: string | null = null;
+let currentAbort: AbortController | null = null;
 
 const cleanupCurrentAudio = () => {
+  if (currentAbort) {
+    currentAbort.abort();
+    currentAbort = null;
+  }
   if (currentAudio) {
     currentAudio.pause();
     currentAudio.src = "";
@@ -134,7 +139,9 @@ chrome.runtime.onMessage.addListener((message) => {
     if (!url || typeof url !== "string") return;
 
     console.log("[Offscreen] Playing audio:", url);
-    fetch(url, { credentials: "include" })
+    const controller = new AbortController();
+    currentAbort = controller;
+    fetch(url, { credentials: "include", signal: controller.signal })
       .then((response) => {
         if (!response.ok) {
           throw new Error(
@@ -150,7 +157,12 @@ chrome.runtime.onMessage.addListener((message) => {
         return response.blob().then((blob) => playBlob(blob));
       })
       .catch((error) => {
-        console.error("Offscreen audio playback failed:", error);
+        if (error?.name !== "AbortError") {
+          console.error("Offscreen audio playback failed:", error);
+        }
+      })
+      .finally(() => {
+        if (currentAbort === controller) currentAbort = null;
       });
     return;
   }
@@ -161,10 +173,13 @@ chrome.runtime.onMessage.addListener((message) => {
     if (!text || typeof text !== "string") return;
 
     console.log("[Offscreen] Fetching TTS for text length:", text.length);
+    const controller = new AbortController();
+    currentAbort = controller;
     fetch("http://localhost:8778/experiments/tts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: text.trim(), voice: voice || undefined }),
+      signal: controller.signal,
     })
       .then((response) => {
         if (!response.ok) {
@@ -181,7 +196,18 @@ chrome.runtime.onMessage.addListener((message) => {
         return response.blob().then((blob) => playBlob(blob));
       })
       .catch((error) => {
-        console.error("Offscreen TTS playback failed:", error);
+        if (error?.name !== "AbortError") {
+          console.error("Offscreen TTS playback failed:", error);
+        }
+      })
+      .finally(() => {
+        if (currentAbort === controller) currentAbort = null;
       });
+    return;
+  }
+
+  if (message.type === "offscreen-tts-stop") {
+    console.log("[Offscreen] Stopping TTS playback.");
+    cleanupCurrentAudio();
   }
 });
