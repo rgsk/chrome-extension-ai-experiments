@@ -31,15 +31,6 @@ const getTabScreenshotDataUrl = () => {
   });
 };
 
-const getSelectedTextForTab = async (tabId: number) => {
-  const result = await chrome.scripting.executeScript({
-    target: { tabId: tabId },
-    func: () => window.getSelection?.()?.toString() ?? "",
-  });
-  const selectedText = result[0]?.result ?? "";
-  return selectedText;
-};
-
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function captureFullPage(tabId: number) {
@@ -85,21 +76,7 @@ const SidePanel = () => {
   const copyRef = useRef(copy);
   copyRef.current = copy;
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const handlePlayTest = useCallback(() => {
-    chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
-      if (!tab?.id) return;
-      const selectedText = await getSelectedTextForTab(tab.id);
-      if (!selectedText.trim()) {
-        console.warn("No selected text to play.");
-        return;
-      }
-      chrome.runtime.sendMessage({
-        type: "play-tts",
-        text: selectedText,
-        voice: "alloy",
-      });
-    });
-  }, []);
+
   const [iframeState, setIframeState] = useState<{
     connectionActive: boolean;
   }>({ connectionActive: false });
@@ -273,11 +250,6 @@ const SidePanel = () => {
 
   return (
     <div className="h-screen flex flex-col">
-      <div className="p-2 border-b border-gray-200">
-        <button type="button" onClick={handlePlayTest}>
-          Play
-        </button>
-      </div>
       <iframe
         ref={iframeRef}
         title="React AI Experiments"

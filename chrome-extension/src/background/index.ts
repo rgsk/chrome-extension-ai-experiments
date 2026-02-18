@@ -73,4 +73,28 @@ chrome.commands.onCommand.addListener((command) => {
       }
     });
   }
+  if (command === "play-selected-text") {
+    chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
+      if (!tab?.id) return;
+      const result = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => window.getSelection?.()?.toString() ?? "",
+      });
+      const selectedText = result[0]?.result ?? "";
+      if (!selectedText.trim()) {
+        console.warn("No selected text to play.");
+        return;
+      }
+      const text = selectedText;
+      const voice = "alloy";
+      void ensureOffscreenDocument()
+        .then(() => {
+          console.log("Offscreen document ready, sending TTS request.");
+          chrome.runtime.sendMessage({ type: "offscreen-tts", text, voice });
+        })
+        .catch((error) => {
+          console.error("Failed to create offscreen document:", error);
+        });
+    });
+  }
 });

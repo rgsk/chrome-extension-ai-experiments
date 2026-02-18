@@ -56,6 +56,13 @@ const manifest = {
       },
       description: "Open Side Panel",
     },
+    "play-selected-text": {
+      suggested_key: {
+        default: "Ctrl+Shift+P",
+        mac: "Command+Shift+P",
+      },
+      description: "Play Selected Text",
+    },
   },
   chrome_url_overrides: {
     // newtab: "new-tab/index.html",
