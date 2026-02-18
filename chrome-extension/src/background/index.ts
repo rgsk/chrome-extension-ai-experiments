@@ -10,8 +10,6 @@ console.log(
   "Edit 'chrome-extension/src/background/index.ts' and save to reload.",
 );
 
-let lastSelectedTtsText: string | null = null;
-
 async function ensureOffscreenDocument() {
   if (!chrome.offscreen?.createDocument) {
     console.warn("chrome.offscreen is not available in this environment.");
@@ -96,25 +94,6 @@ chrome.commands.onCommand.addListener((command) => {
       });
       const selectedText = result[0]?.result ?? "";
       const text = selectedText.trim();
-
-      const shouldStop =
-        !text || (lastSelectedTtsText !== null && text === lastSelectedTtsText);
-      if (shouldStop) {
-        void ensureOffscreenDocument()
-          .then(() => {
-            console.log("Offscreen document ready, sending TTS stop request.");
-            chrome.runtime.sendMessage({ type: "offscreen-tts-stop" });
-          })
-          .catch((error) => {
-            console.error("Failed to create offscreen document:", error);
-          });
-        if (!text) {
-          console.warn("No selected text to play.");
-        }
-        return;
-      }
-
-      lastSelectedTtsText = text;
       const voice = "alloy";
       void ensureOffscreenDocument()
         .then(() => {
