@@ -1,4 +1,4 @@
-import { FASTIFY_SERVER_URL } from "@extension/env";
+import { SD_CENTRAL_SERVER_URL } from "@extension/env";
 
 console.log("[Offscreen] Loaded");
 
@@ -158,7 +158,7 @@ chrome.runtime.onMessage.addListener((message) => {
     const controller = new AbortController();
     currentAbort = controller;
 
-    fetch(`${FASTIFY_SERVER_URL}/experiments/tts`, {
+    fetch(`${SD_CENTRAL_SERVER_URL}/experiments/tts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, voice }),

@@ -3,4 +3,4 @@ export const IS_PROD = !IS_DEV;
 export const IS_FIREFOX = process.env["CLI_CEB_FIREFOX"] === "true";
 export const IS_CI = process.env["CEB_CI"] === "true";
 export const REACT_EXPERIMENTS_URL = process.env["CEB_REACT_EXPERIMENTS_URL"];
-export const FASTIFY_SERVER_URL = process.env["CEB_FASTIFY_SERVER_URL"];
+export const SD_CENTRAL_SERVER_URL = process.env["CEB_SD_CENTRAL_SERVER_URL"];
