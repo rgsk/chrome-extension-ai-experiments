@@ -6,6 +6,9 @@ export const sharedStorage = createStorage(
     gemini: {
       hideMyStuffRecentsPreview: false,
     },
+    cses: {
+      checkedByTaskKey: {} as Record<string, boolean>,
+    },
   },
   {
     storageEnum: StorageEnum.Local,

@@ -4,8 +4,11 @@ import { ToggleButton } from "@extension/ui";
 import { useEffect, useRef } from "react";
 import { sharedStorage } from "../../../../../packages/storage/lib";
 
+function getSymbol(filled: boolean) {
+  return filled ? "★" : "☆";
+}
 export default function App() {
-  const { gemini } = useStorage(sharedStorage);
+  const { gemini, cses } = useStorage(sharedStorage);
   const lastAudioBlockedUrlRef = useRef("");
   useEffect(() => {
     console.log("[CEB] Content ui all loaded");
@@ -45,6 +48,63 @@ export default function App() {
       observer.disconnect();
     };
   }, [gemini.hideMyStuffRecentsPreview]);
+
+  useEffect(() => {
+    if (window.location.href !== "https://cses.fi/problemset/") {
+      return;
+    }
+    const tasks = document.querySelectorAll("li.task");
+    tasks.forEach((task) => {
+      const problemLink = task.querySelector("a");
+      const taskKey = problemLink?.getAttribute("href");
+      if (!taskKey) return;
+
+      const isChecked = Boolean(cses.checkedByTaskKey[taskKey]);
+      const existingCheckmark = task.querySelector(
+        ".task-check-toggle",
+      ) as HTMLButtonElement | null;
+
+      if (existingCheckmark) {
+        existingCheckmark.dataset.checked = String(isChecked);
+        existingCheckmark.textContent = getSymbol(isChecked);
+        return;
+      }
+
+      const checkmark = document.createElement("button");
+
+      checkmark.type = "button";
+      checkmark.className = "task-check-toggle";
+      checkmark.dataset.checked = String(isChecked);
+      checkmark.style.fontSize = "18px";
+      checkmark.textContent = getSymbol(isChecked);
+      checkmark.style.margin = "0px 8px";
+      checkmark.style.border = "none";
+      checkmark.style.background = "transparent";
+      checkmark.style.padding = "0";
+      checkmark.style.boxShadow = "none";
+      checkmark.style.cursor = "pointer";
+
+      checkmark.addEventListener("click", () => {
+        const nextChecked = checkmark.dataset.checked !== "true";
+
+        checkmark.dataset.checked = String(nextChecked);
+        checkmark.textContent = getSymbol(nextChecked);
+
+        sharedStorage.set((prev) => ({
+          ...prev,
+          cses: {
+            ...prev.cses,
+            checkedByTaskKey: {
+              ...prev.cses.checkedByTaskKey,
+              [taskKey]: nextChecked,
+            },
+          },
+        }));
+      });
+
+      task.appendChild(checkmark);
+    });
+  }, [cses.checkedByTaskKey]);
 
   useEffect(() => {
     if (window.location.origin !== "https://chatgpt.com") return;
