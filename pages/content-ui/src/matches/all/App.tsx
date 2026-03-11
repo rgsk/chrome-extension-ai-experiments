@@ -81,6 +81,9 @@ export default function App() {
       document.querySelectorAll(".section-meta").forEach((element) => {
         element.remove();
       });
+      document.querySelectorAll(".task-copy-button").forEach((element) => {
+        element.remove();
+      });
       document.querySelectorAll(".task-check-toggle").forEach((element) => {
         element.remove();
       });
@@ -224,6 +227,54 @@ export default function App() {
         const problemLink = task.querySelector("a");
         const taskKey = problemLink?.textContent;
         if (!taskKey) return;
+
+        const existingCopyButton = task.querySelector(
+          ".task-copy-button",
+        ) as HTMLButtonElement | null;
+
+        if (!existingCopyButton) {
+          const copyButton = document.createElement("button");
+
+          copyButton.type = "button";
+          copyButton.className = "task-copy-button";
+          copyButton.textContent = "⧉";
+          copyButton.title = "Copy";
+          copyButton.style.fontSize = "20px";
+          copyButton.style.margin = "0px 8px 0px 0px";
+          copyButton.style.border = "none";
+          copyButton.style.background = "transparent";
+          copyButton.style.padding = "0";
+          copyButton.style.boxShadow = "none";
+          copyButton.style.cursor = "pointer";
+
+          copyButton.addEventListener("click", async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const allTasks = Array.from(document.querySelectorAll("li.task"));
+            const taskNumber = allTasks.indexOf(task) + 1;
+            const paddedTaskNumber = String(taskNumber).padStart(2, "0");
+            const notebookName = `${paddedTaskNumber}. ${taskKey}.ipynb`;
+
+            try {
+              await navigator.clipboard.writeText(notebookName);
+              console.log("[CEB] copied task key", {
+                sectionKey,
+                taskKey,
+                notebookName,
+              });
+            } catch (error) {
+              console.warn("[CEB] failed to copy task key", {
+                sectionKey,
+                taskKey,
+                notebookName,
+                error,
+              });
+            }
+          });
+
+          task.prepend(copyButton);
+        }
 
         const isChecked = Boolean(cses.bookmarks?.[sectionKey]?.[taskKey]);
         const existingCheckmark = task.querySelector(
