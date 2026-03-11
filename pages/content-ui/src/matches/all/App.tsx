@@ -76,6 +76,23 @@ export default function App() {
     if (window.location.href !== "https://cses.fi/problemset/") {
       return;
     }
+
+    if (!cses.problemBookmarksEnabled) {
+      document.querySelectorAll(".section-meta").forEach((element) => {
+        element.remove();
+      });
+      document.querySelectorAll(".task-check-toggle").forEach((element) => {
+        element.remove();
+      });
+      document.querySelectorAll("h2").forEach((heading) => {
+        const sectionHeading = heading as HTMLHeadingElement;
+
+        sectionHeading.style.display = "";
+        sectionHeading.style.alignItems = "";
+      });
+      return;
+    }
+
     const headings = document.querySelectorAll("h2");
     headings.forEach((heading) => {
       const sectionKey = getSectionKey(heading);
@@ -171,7 +188,7 @@ export default function App() {
         resetButton.style.boxShadow = "none";
         resetButton.style.padding = "8px";
         resetButton.style.cursor = "pointer";
-        resetButton.style.transform = "translateY(2px)";
+        resetButton.style.transform = "translateY(1px)";
 
         resetButton.addEventListener("click", () => {
           const confirmReset = confirm(
@@ -271,7 +288,7 @@ export default function App() {
         task.appendChild(checkmark);
       });
     });
-  }, [cses.bookmarks]);
+  }, [cses.bookmarks, cses.problemBookmarksEnabled]);
 
   useEffect(() => {
     if (window.location.origin !== "https://chatgpt.com") return;

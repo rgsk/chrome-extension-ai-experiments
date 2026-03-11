@@ -7,6 +7,7 @@ export const sharedStorage = createStorage(
       hideMyStuffRecentsPreview: false,
     },
     cses: {
+      problemBookmarksEnabled: true,
       bookmarks: {} as Record<string, Record<string, boolean>>,
     },
   },

@@ -25,7 +25,7 @@ const notificationOptions = {
 
 const Popup = () => {
   const { isLight } = useStorage(exampleThemeStorage);
-  const { gemini } = useStorage(sharedStorage);
+  const { gemini, cses } = useStorage(sharedStorage);
   const logo = isLight
     ? "popup/logo_vertical.svg"
     : "popup/logo_vertical_dark.svg";
@@ -61,10 +61,12 @@ const Popup = () => {
   };
 
   const [tabOrigin, setTabOrigin] = useState<string>();
+  const [tabUrl, setTabUrl] = useState<string>();
 
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
       if (tab?.url) {
+        setTabUrl(tab.url);
         setTabOrigin(new URL(tab.url).origin);
       }
     });
@@ -73,25 +75,41 @@ const Popup = () => {
   return (
     <div className={cn("App", isLight ? "bg-slate-50" : "bg-gray-800")}>
       {tabOrigin === "https://gemini.google.com" ? (
-        <>
-          <div className="flex flex-col">
-            <Switch
-              checked={gemini.hideMyStuffRecentsPreview}
-              onChange={(checked) => {
-                sharedStorage.set((prev) => {
-                  return {
-                    ...prev,
-                    gemini: {
-                      ...prev.gemini,
-                      hideMyStuffRecentsPreview: checked,
-                    },
-                  };
-                });
-              }}
-              label="Hide: Recents Preview"
-            />
-          </div>
-        </>
+        <div className="flex flex-col">
+          <Switch
+            checked={gemini.hideMyStuffRecentsPreview}
+            onChange={(checked) => {
+              sharedStorage.set((prev) => {
+                return {
+                  ...prev,
+                  gemini: {
+                    ...prev.gemini,
+                    hideMyStuffRecentsPreview: checked,
+                  },
+                };
+              });
+            }}
+            label="Hide: Recents Preview"
+          />
+        </div>
+      ) : tabUrl === "https://cses.fi/problemset/" ? (
+        <div className="flex flex-col">
+          <Switch
+            checked={cses.problemBookmarksEnabled}
+            onChange={(checked) => {
+              sharedStorage.set((prev) => {
+                return {
+                  ...prev,
+                  cses: {
+                    ...prev.cses,
+                    problemBookmarksEnabled: checked,
+                  },
+                };
+              });
+            }}
+            label="Problem Bookmarks"
+          />
+        </div>
       ) : (
         <header
           className={cn(
