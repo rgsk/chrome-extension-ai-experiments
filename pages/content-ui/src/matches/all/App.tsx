@@ -89,9 +89,18 @@ export default function App() {
         const totalTasksCount = tasks.length;
         const completedTasksCount =
           Object.keys(cses.bookmarks?.[sectionKey] ?? {}).length || 0;
+        const existingMeta = heading.querySelector(
+          ".section-meta",
+        ) as HTMLSpanElement | null;
         const existingProgress = heading.querySelector(
           ".section-progress-count",
         ) as HTMLSpanElement | null;
+        const existingResetButton = heading.querySelector(
+          ".section-reset-button",
+        ) as HTMLButtonElement | null;
+
+        heading.style.display = "flex";
+        heading.style.alignItems = "center";
 
         if (existingProgress) {
           existingProgress.textContent = getProgressLabel(
@@ -99,19 +108,68 @@ export default function App() {
             totalTasksCount,
           );
         } else {
+          const meta = existingMeta ?? document.createElement("span");
           const progress = document.createElement("span");
+
+          meta.className = "section-meta";
+          meta.style.marginLeft = "auto";
+          meta.style.display = "inline-flex";
+          meta.style.alignItems = "center";
+          meta.style.gap = "12px";
 
           progress.className = "section-progress-count";
           progress.textContent = getProgressLabel(
             completedTasksCount,
             totalTasksCount,
           );
-          progress.style.marginLeft = "12px";
           progress.style.fontSize = "20px";
           progress.style.fontWeight = "400";
           progress.style.color = "#666";
 
-          heading.appendChild(progress);
+          meta.appendChild(progress);
+          heading.appendChild(meta);
+        }
+
+        if (!existingResetButton) {
+          const meta =
+            existingMeta ??
+            (heading.querySelector(".section-meta") as HTMLSpanElement | null);
+          if (!meta) return;
+
+          const resetButton = document.createElement("button");
+
+          resetButton.type = "button";
+          resetButton.className = "section-reset-button";
+          resetButton.textContent = "🔁";
+          resetButton.style.fontSize = "20px";
+          resetButton.style.border = "none";
+          resetButton.style.background = "none";
+          resetButton.style.boxShadow = "none";
+          resetButton.style.padding = "8px";
+          resetButton.style.cursor = "pointer";
+
+          resetButton.addEventListener("click", () => {
+            const confirmReset = confirm(
+              `Reset progress for section "${sectionKey}"?`,
+            );
+            if (!confirmReset) return;
+            sharedStorage.set((prev) => {
+              const prevCses = prev.cses ?? { bookmarks: {} };
+              const prevBookmarks = { ...(prevCses.bookmarks ?? {}) };
+
+              delete prevBookmarks[sectionKey];
+
+              return {
+                ...prev,
+                cses: {
+                  ...prevCses,
+                  bookmarks: prevBookmarks,
+                },
+              };
+            });
+          });
+
+          meta.appendChild(resetButton);
         }
         tasks.forEach((task) => {
           const problemLink = task.querySelector("a");
