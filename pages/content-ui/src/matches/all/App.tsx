@@ -12,7 +12,7 @@ function getProgressLabel(
   completedTasksCount: number,
   totalTasksCount: number,
 ) {
-  return ` ${completedTasksCount}/${totalTasksCount}`;
+  return `${completedTasksCount}/${totalTasksCount}`;
 }
 
 function getSectionKey(heading: HTMLHeadingElement) {
@@ -79,166 +79,197 @@ export default function App() {
     const headings = document.querySelectorAll("h2");
     headings.forEach((heading) => {
       const sectionKey = getSectionKey(heading);
+      if (!sectionKey) return;
+      const isGeneralHeading = sectionKey === "General";
+      const taskList = heading.nextSibling as HTMLUListElement | null;
+      const tasks = isGeneralHeading
+        ? []
+        : Array.from(taskList?.querySelectorAll("li.task") ?? []);
+      const totalTasksCount = isGeneralHeading
+        ? document.querySelectorAll("li.task").length
+        : tasks.length;
+      const completedTasksCount = isGeneralHeading
+        ? Array.from(document.querySelectorAll("li.task")).reduce(
+            (count, task) => {
+              const parentHeading = task.parentElement
+                ?.previousElementSibling as HTMLHeadingElement | null;
+              const parentSectionKey =
+                parentHeading?.dataset.sectionKey ?? parentHeading?.textContent;
+              const taskKey = task.querySelector("a")?.textContent;
 
-      // exclude first heading
-      if (sectionKey !== "General") {
-        const taskList = heading.nextSibling as HTMLUListElement;
-        if (!taskList) return;
-        if (!sectionKey) return;
-        const tasks = taskList.querySelectorAll("li.task");
-        const totalTasksCount = tasks.length;
-        const completedTasksCount =
-          Object.keys(cses.bookmarks?.[sectionKey] ?? {}).length || 0;
-        const existingMeta = heading.querySelector(
-          ".section-meta",
-        ) as HTMLSpanElement | null;
-        const existingProgress = heading.querySelector(
-          ".section-progress-count",
-        ) as HTMLSpanElement | null;
-        const existingResetButton = heading.querySelector(
-          ".section-reset-button",
+              return (
+                count +
+                Number(
+                  Boolean(
+                    parentSectionKey &&
+                      taskKey &&
+                      cses.bookmarks?.[parentSectionKey]?.[taskKey],
+                  ),
+                )
+              );
+            },
+            0,
+          )
+        : Object.keys(cses.bookmarks?.[sectionKey] ?? {}).length;
+
+      if (!isGeneralHeading && !taskList) return;
+      const existingMeta = heading.querySelector(
+        ".section-meta",
+      ) as HTMLSpanElement | null;
+      const existingProgress = heading.querySelector(
+        ".section-progress-count",
+      ) as HTMLSpanElement | null;
+      const existingResetButton = heading.querySelector(
+        ".section-reset-button",
+      ) as HTMLButtonElement | null;
+
+      heading.style.display = "flex";
+      heading.style.alignItems = "center";
+
+      if (existingProgress) {
+        existingProgress.textContent = getProgressLabel(
+          completedTasksCount,
+          totalTasksCount,
+        );
+      } else {
+        const meta = existingMeta ?? document.createElement("span");
+        const progress = document.createElement("span");
+
+        meta.className = "section-meta";
+        meta.style.marginLeft = "auto";
+        meta.style.display = "inline-flex";
+        meta.style.alignItems = "center";
+        meta.style.gap = "12px";
+
+        progress.className = "section-progress-count";
+        progress.textContent = getProgressLabel(
+          completedTasksCount,
+          totalTasksCount,
+        );
+        progress.style.fontSize = "20px";
+        progress.style.fontWeight = "400";
+        progress.style.color = "#666";
+
+        meta.appendChild(progress);
+        heading.appendChild(meta);
+      }
+
+      if (!existingResetButton) {
+        const meta =
+          existingMeta ??
+          (heading.querySelector(".section-meta") as HTMLSpanElement | null);
+        if (!meta) return;
+
+        const resetButton = document.createElement("button");
+
+        resetButton.type = "button";
+        resetButton.className = "section-reset-button";
+        resetButton.textContent = "🔁";
+        resetButton.style.fontSize = "20px";
+        resetButton.style.border = "none";
+        resetButton.style.background = "none";
+        resetButton.style.boxShadow = "none";
+        resetButton.style.padding = "8px";
+        resetButton.style.cursor = "pointer";
+        resetButton.style.transform = "translateY(2px)";
+
+        resetButton.addEventListener("click", () => {
+          const confirmReset = confirm(
+            isGeneralHeading
+              ? "Reset all CSES progress?"
+              : `Reset progress for section "${sectionKey}"?`,
+          );
+          if (!confirmReset) return;
+          sharedStorage.set((prev) => {
+            const prevCses = prev.cses ?? { bookmarks: {} };
+            const prevBookmarks = isGeneralHeading
+              ? {}
+              : { ...(prevCses.bookmarks ?? {}) };
+
+            if (!isGeneralHeading) {
+              delete prevBookmarks[sectionKey];
+            }
+
+            return {
+              ...prev,
+              cses: {
+                ...prevCses,
+                bookmarks: prevBookmarks,
+              },
+            };
+          });
+        });
+
+        meta.appendChild(resetButton);
+      }
+      if (isGeneralHeading) return;
+      tasks.forEach((task) => {
+        const problemLink = task.querySelector("a");
+        const taskKey = problemLink?.textContent;
+        if (!taskKey) return;
+
+        const isChecked = Boolean(cses.bookmarks?.[sectionKey]?.[taskKey]);
+        const existingCheckmark = task.querySelector(
+          ".task-check-toggle",
         ) as HTMLButtonElement | null;
 
-        heading.style.display = "flex";
-        heading.style.alignItems = "center";
-
-        if (existingProgress) {
-          existingProgress.textContent = getProgressLabel(
-            completedTasksCount,
-            totalTasksCount,
-          );
-        } else {
-          const meta = existingMeta ?? document.createElement("span");
-          const progress = document.createElement("span");
-
-          meta.className = "section-meta";
-          meta.style.marginLeft = "auto";
-          meta.style.display = "inline-flex";
-          meta.style.alignItems = "center";
-          meta.style.gap = "12px";
-
-          progress.className = "section-progress-count";
-          progress.textContent = getProgressLabel(
-            completedTasksCount,
-            totalTasksCount,
-          );
-          progress.style.fontSize = "20px";
-          progress.style.fontWeight = "400";
-          progress.style.color = "#666";
-
-          meta.appendChild(progress);
-          heading.appendChild(meta);
+        if (existingCheckmark) {
+          existingCheckmark.dataset.checked = String(isChecked);
+          existingCheckmark.textContent = getSymbol(isChecked);
+          return;
         }
 
-        if (!existingResetButton) {
-          const meta =
-            existingMeta ??
-            (heading.querySelector(".section-meta") as HTMLSpanElement | null);
-          if (!meta) return;
+        const checkmark = document.createElement("button");
 
-          const resetButton = document.createElement("button");
+        checkmark.type = "button";
+        checkmark.className = "task-check-toggle";
+        checkmark.dataset.checked = String(isChecked);
+        checkmark.style.fontSize = "18px";
+        checkmark.textContent = getSymbol(isChecked);
+        checkmark.style.margin = "0px 8px";
+        checkmark.style.border = "none";
+        checkmark.style.background = "transparent";
+        checkmark.style.padding = "0";
+        checkmark.style.boxShadow = "none";
+        checkmark.style.cursor = "pointer";
 
-          resetButton.type = "button";
-          resetButton.className = "section-reset-button";
-          resetButton.textContent = "🔁";
-          resetButton.style.fontSize = "20px";
-          resetButton.style.border = "none";
-          resetButton.style.background = "none";
-          resetButton.style.boxShadow = "none";
-          resetButton.style.padding = "8px";
-          resetButton.style.cursor = "pointer";
+        checkmark.addEventListener("click", () => {
+          const nextChecked = checkmark.dataset.checked !== "true";
 
-          resetButton.addEventListener("click", () => {
-            const confirmReset = confirm(
-              `Reset progress for section "${sectionKey}"?`,
-            );
-            if (!confirmReset) return;
-            sharedStorage.set((prev) => {
-              const prevCses = prev.cses ?? { bookmarks: {} };
-              const prevBookmarks = { ...(prevCses.bookmarks ?? {}) };
+          checkmark.dataset.checked = String(nextChecked);
+          checkmark.textContent = getSymbol(nextChecked);
 
-              delete prevBookmarks[sectionKey];
+          sharedStorage.set((prev) => {
+            const prevCses = prev.cses ?? { bookmarks: {} };
+            const prevBookmarks = prevCses.bookmarks ?? {};
+            const sectionBookmarks = { ...(prevBookmarks[sectionKey] ?? {}) };
 
-              return {
-                ...prev,
-                cses: {
-                  ...prevCses,
-                  bookmarks: prevBookmarks,
-                },
-              };
-            });
+            if (nextChecked) {
+              sectionBookmarks[taskKey] = true;
+            } else {
+              delete sectionBookmarks[taskKey];
+            }
+
+            const nextBookmarks = { ...prevBookmarks };
+
+            if (Object.keys(sectionBookmarks).length === 0) {
+              delete nextBookmarks[sectionKey];
+            } else {
+              nextBookmarks[sectionKey] = sectionBookmarks;
+            }
+
+            return {
+              ...prev,
+              cses: {
+                ...prevCses,
+                bookmarks: nextBookmarks,
+              },
+            };
           });
-
-          meta.appendChild(resetButton);
-        }
-        tasks.forEach((task) => {
-          const problemLink = task.querySelector("a");
-          const taskKey = problemLink?.textContent;
-          if (!taskKey) return;
-
-          const isChecked = Boolean(cses.bookmarks?.[sectionKey]?.[taskKey]);
-          const existingCheckmark = task.querySelector(
-            ".task-check-toggle",
-          ) as HTMLButtonElement | null;
-
-          if (existingCheckmark) {
-            existingCheckmark.dataset.checked = String(isChecked);
-            existingCheckmark.textContent = getSymbol(isChecked);
-            return;
-          }
-
-          const checkmark = document.createElement("button");
-
-          checkmark.type = "button";
-          checkmark.className = "task-check-toggle";
-          checkmark.dataset.checked = String(isChecked);
-          checkmark.style.fontSize = "18px";
-          checkmark.textContent = getSymbol(isChecked);
-          checkmark.style.margin = "0px 8px";
-          checkmark.style.border = "none";
-          checkmark.style.background = "transparent";
-          checkmark.style.padding = "0";
-          checkmark.style.boxShadow = "none";
-          checkmark.style.cursor = "pointer";
-
-          checkmark.addEventListener("click", () => {
-            const nextChecked = checkmark.dataset.checked !== "true";
-
-            checkmark.dataset.checked = String(nextChecked);
-            checkmark.textContent = getSymbol(nextChecked);
-
-            sharedStorage.set((prev) => {
-              const prevCses = prev.cses ?? { bookmarks: {} };
-              const prevBookmarks = prevCses.bookmarks ?? {};
-              const sectionBookmarks = { ...(prevBookmarks[sectionKey] ?? {}) };
-
-              if (nextChecked) {
-                sectionBookmarks[taskKey] = true;
-              } else {
-                delete sectionBookmarks[taskKey];
-              }
-
-              const nextBookmarks = { ...prevBookmarks };
-
-              if (Object.keys(sectionBookmarks).length === 0) {
-                delete nextBookmarks[sectionKey];
-              } else {
-                nextBookmarks[sectionKey] = sectionBookmarks;
-              }
-
-              return {
-                ...prev,
-                cses: {
-                  ...prevCses,
-                  bookmarks: nextBookmarks,
-                },
-              };
-            });
-          });
-
-          task.appendChild(checkmark);
         });
-      }
+
+        task.appendChild(checkmark);
+      });
     });
   }, [cses.bookmarks]);
 
