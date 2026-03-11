@@ -7,6 +7,26 @@ import { sharedStorage } from "../../../../../packages/storage/lib";
 function getSymbol(filled: boolean) {
   return filled ? "★" : "☆";
 }
+
+function getProgressLabel(
+  completedTasksCount: number,
+  totalTasksCount: number,
+) {
+  return ` ${completedTasksCount}/${totalTasksCount}`;
+}
+
+function getSectionKey(heading: HTMLHeadingElement) {
+  const existingSectionKey = heading.dataset.sectionKey;
+  if (existingSectionKey) return existingSectionKey;
+
+  const sectionKey = heading.textContent;
+  if (sectionKey) {
+    heading.dataset.sectionKey = sectionKey;
+  }
+
+  return sectionKey;
+}
+
 export default function App() {
   const { gemini, cses } = useStorage(sharedStorage);
   const lastAudioBlockedUrlRef = useRef("");
@@ -48,63 +68,121 @@ export default function App() {
       observer.disconnect();
     };
   }, [gemini.hideMyStuffRecentsPreview]);
+  useEffect(() => {
+    console.log(cses.bookmarks);
+  }, [cses.bookmarks]);
 
   useEffect(() => {
     if (window.location.href !== "https://cses.fi/problemset/") {
       return;
     }
-    const tasks = document.querySelectorAll("li.task");
-    tasks.forEach((task) => {
-      const problemLink = task.querySelector("a");
-      const taskKey = problemLink?.getAttribute("href");
-      if (!taskKey) return;
+    const headings = document.querySelectorAll("h2");
+    headings.forEach((heading) => {
+      const sectionKey = getSectionKey(heading);
 
-      const isChecked = Boolean(cses.checkedByTaskKey[taskKey]);
-      const existingCheckmark = task.querySelector(
-        ".task-check-toggle",
-      ) as HTMLButtonElement | null;
+      // exclude first heading
+      if (sectionKey !== "General") {
+        const taskList = heading.nextSibling as HTMLUListElement;
+        if (!taskList) return;
+        if (!sectionKey) return;
+        const tasks = taskList.querySelectorAll("li.task");
+        const totalTasksCount = tasks.length;
+        const completedTasksCount =
+          Object.keys(cses.bookmarks?.[sectionKey] ?? {}).length || 0;
+        const existingProgress = heading.querySelector(
+          ".section-progress-count",
+        ) as HTMLSpanElement | null;
 
-      if (existingCheckmark) {
-        existingCheckmark.dataset.checked = String(isChecked);
-        existingCheckmark.textContent = getSymbol(isChecked);
-        return;
+        if (existingProgress) {
+          existingProgress.textContent = getProgressLabel(
+            completedTasksCount,
+            totalTasksCount,
+          );
+        } else {
+          const progress = document.createElement("span");
+
+          progress.className = "section-progress-count";
+          progress.textContent = getProgressLabel(
+            completedTasksCount,
+            totalTasksCount,
+          );
+          progress.style.marginLeft = "12px";
+          progress.style.fontSize = "20px";
+          progress.style.fontWeight = "400";
+          progress.style.color = "#666";
+
+          heading.appendChild(progress);
+        }
+        tasks.forEach((task) => {
+          const problemLink = task.querySelector("a");
+          const taskKey = problemLink?.textContent;
+          if (!taskKey) return;
+
+          const isChecked = Boolean(cses.bookmarks?.[sectionKey]?.[taskKey]);
+          const existingCheckmark = task.querySelector(
+            ".task-check-toggle",
+          ) as HTMLButtonElement | null;
+
+          if (existingCheckmark) {
+            existingCheckmark.dataset.checked = String(isChecked);
+            existingCheckmark.textContent = getSymbol(isChecked);
+            return;
+          }
+
+          const checkmark = document.createElement("button");
+
+          checkmark.type = "button";
+          checkmark.className = "task-check-toggle";
+          checkmark.dataset.checked = String(isChecked);
+          checkmark.style.fontSize = "18px";
+          checkmark.textContent = getSymbol(isChecked);
+          checkmark.style.margin = "0px 8px";
+          checkmark.style.border = "none";
+          checkmark.style.background = "transparent";
+          checkmark.style.padding = "0";
+          checkmark.style.boxShadow = "none";
+          checkmark.style.cursor = "pointer";
+
+          checkmark.addEventListener("click", () => {
+            const nextChecked = checkmark.dataset.checked !== "true";
+
+            checkmark.dataset.checked = String(nextChecked);
+            checkmark.textContent = getSymbol(nextChecked);
+
+            sharedStorage.set((prev) => {
+              const prevCses = prev.cses ?? { bookmarks: {} };
+              const prevBookmarks = prevCses.bookmarks ?? {};
+              const sectionBookmarks = { ...(prevBookmarks[sectionKey] ?? {}) };
+
+              if (nextChecked) {
+                sectionBookmarks[taskKey] = true;
+              } else {
+                delete sectionBookmarks[taskKey];
+              }
+
+              const nextBookmarks = { ...prevBookmarks };
+
+              if (Object.keys(sectionBookmarks).length === 0) {
+                delete nextBookmarks[sectionKey];
+              } else {
+                nextBookmarks[sectionKey] = sectionBookmarks;
+              }
+
+              return {
+                ...prev,
+                cses: {
+                  ...prevCses,
+                  bookmarks: nextBookmarks,
+                },
+              };
+            });
+          });
+
+          task.appendChild(checkmark);
+        });
       }
-
-      const checkmark = document.createElement("button");
-
-      checkmark.type = "button";
-      checkmark.className = "task-check-toggle";
-      checkmark.dataset.checked = String(isChecked);
-      checkmark.style.fontSize = "18px";
-      checkmark.textContent = getSymbol(isChecked);
-      checkmark.style.margin = "0px 8px";
-      checkmark.style.border = "none";
-      checkmark.style.background = "transparent";
-      checkmark.style.padding = "0";
-      checkmark.style.boxShadow = "none";
-      checkmark.style.cursor = "pointer";
-
-      checkmark.addEventListener("click", () => {
-        const nextChecked = checkmark.dataset.checked !== "true";
-
-        checkmark.dataset.checked = String(nextChecked);
-        checkmark.textContent = getSymbol(nextChecked);
-
-        sharedStorage.set((prev) => ({
-          ...prev,
-          cses: {
-            ...prev.cses,
-            checkedByTaskKey: {
-              ...prev.cses.checkedByTaskKey,
-              [taskKey]: nextChecked,
-            },
-          },
-        }));
-      });
-
-      task.appendChild(checkmark);
     });
-  }, [cses.checkedByTaskKey]);
+  }, [cses.bookmarks]);
 
   useEffect(() => {
     if (window.location.origin !== "https://chatgpt.com") return;

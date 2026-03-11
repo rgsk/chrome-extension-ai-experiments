@@ -7,7 +7,7 @@ export const sharedStorage = createStorage(
       hideMyStuffRecentsPreview: false,
     },
     cses: {
-      checkedByTaskKey: {} as Record<string, boolean>,
+      bookmarks: {} as Record<string, Record<string, boolean>>,
     },
   },
   {
