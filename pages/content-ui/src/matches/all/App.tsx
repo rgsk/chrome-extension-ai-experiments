@@ -28,7 +28,7 @@ function getSectionKey(heading: HTMLHeadingElement) {
 }
 
 export default function App() {
-  const { gemini, cses } = useStorage(sharedStorage);
+  const { gemini, cses, leetcode } = useStorage(sharedStorage);
   const lastAudioBlockedUrlRef = useRef("");
   useEffect(() => {
     console.log("[CEB] Content ui all loaded");
@@ -71,6 +71,39 @@ export default function App() {
   useEffect(() => {
     console.log(cses.bookmarks);
   }, [cses.bookmarks]);
+
+  useEffect(() => {
+    if (window.location.href !== "https://leetcode.com/problemset/") {
+      return;
+    }
+    if (!leetcode.hideLockedLinks) {
+      return;
+    }
+
+    const hideLockedLinks = () => {
+      document.querySelectorAll('[data-icon="lock"]').forEach((lock) => {
+        const link = lock.closest("a");
+        if (link) {
+          link.style.display = "none";
+        }
+      });
+    };
+
+    hideLockedLinks();
+
+    const observer = new MutationObserver(() => {
+      hideLockedLinks();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [leetcode.hideLockedLinks]);
 
   useEffect(() => {
     if (window.location.href !== "https://cses.fi/problemset/") {

@@ -25,7 +25,7 @@ const notificationOptions = {
 
 const Popup = () => {
   const { isLight } = useStorage(exampleThemeStorage);
-  const { gemini, cses } = useStorage(sharedStorage);
+  const { gemini, cses, leetcode } = useStorage(sharedStorage);
   const logo = isLight
     ? "popup/logo_vertical.svg"
     : "popup/logo_vertical_dark.svg";
@@ -90,6 +90,24 @@ const Popup = () => {
               });
             }}
             label="Hide: Recents Preview"
+          />
+        </div>
+      ) : tabUrl === "https://leetcode.com/problemset/" ? (
+        <div className="flex flex-col">
+          <Switch
+            checked={leetcode.hideLockedLinks}
+            onChange={(checked) => {
+              sharedStorage.set((prev) => {
+                return {
+                  ...prev,
+                  leetcode: {
+                    ...prev.leetcode,
+                    hideLockedLinks: checked,
+                  },
+                };
+              });
+            }}
+            label="Hide: Locked Links"
           />
         </div>
       ) : tabUrl === "https://cses.fi/problemset/" ? (

@@ -10,6 +10,9 @@ export const sharedStorage = createStorage(
       problemBookmarksEnabled: true,
       bookmarks: {} as Record<string, Record<string, boolean>>,
     },
+    leetcode: {
+      hideLockedLinks: true,
+    },
   },
   {
     storageEnum: StorageEnum.Local,
