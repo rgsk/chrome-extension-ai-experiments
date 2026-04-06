@@ -51,14 +51,14 @@ const manifest = {
   commands: {
     "open-side_panel": {
       suggested_key: {
-        default: "Ctrl+Shift+I",
-        mac: "Command+Shift+I",
+        default: "Ctrl+Shift+U",
+        mac: "Command+Shift+U",
       },
       description: "Open Side Panel",
     },
     "play-selected-text": {
       suggested_key: {
-        default: "Ctrl+Shift+P",
+        default: "Ctrl+Shift+Y",
         mac: "Command+Shift+P",
       },
       description: "Play Selected Text",
