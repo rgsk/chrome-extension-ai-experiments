@@ -1,495 +1,112 @@
 import { useStorage } from "@extension/shared";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { sharedStorage } from "../../../../../packages/storage/lib";
-
-function getSymbol(filled: boolean) {
-  return filled ? "★" : "☆";
-}
-
-function getProgressLabel(
-  completedTasksCount: number,
-  totalTasksCount: number,
-) {
-  return `${completedTasksCount}/${totalTasksCount}`;
-}
-
-function getSectionKey(heading: HTMLHeadingElement) {
-  const existingSectionKey = heading.dataset.sectionKey;
-  if (existingSectionKey) return existingSectionKey;
-
-  const sectionKey = heading.textContent;
-  if (sectionKey) {
-    heading.dataset.sectionKey = sectionKey;
-  }
-
-  return sectionKey;
-}
+import CsesProblemset, { isCsesProblemsetPage } from "./CsesProblemset";
 
 export default function App() {
-  const { gemini, cses, leetcode } = useStorage(sharedStorage);
-  const lastAudioBlockedUrlRef = useRef("");
+  const { leetcode, blockedAudio } = useStorage(sharedStorage);
   useEffect(() => {
     console.log("[CEB] Content ui all loaded");
   }, []);
 
   useEffect(() => {
-    if (window.location.origin !== "https://gemini.google.com") return;
+    if (window.location.origin !== "https://leetcode.com") return;
 
-    const hideRecents = () => {
-      const el = document.querySelector(
-        "my-stuff-recents-preview",
-      ) as HTMLElement;
-
-      if (el) {
-        if (gemini.hideMyStuffRecentsPreview) {
-          el.style.display = "none";
-        } else {
-          el.style.display = "";
-        }
+    // svg.fa-lock matches the class token exactly, so the fa-lock-keyhole
+    // icon in each row's frequency bar is not matched
+    const style = document.createElement("style");
+    style.textContent = `
+      html.ceb-hide-locked a[href^="/problems/"]:has(svg.fa-lock, [data-icon="lock"]) {
+        display: none !important;
       }
-    };
-
-    // run once in case it already exists
-    hideRecents();
-
-    // watch for future DOM changes
-    const observer = new MutationObserver(() => {
-      hideRecents();
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
+    `;
+    document.head.append(style);
 
     return () => {
-      observer.disconnect();
+      style.remove();
     };
-  }, [gemini.hideMyStuffRecentsPreview]);
-  useEffect(() => {
-    console.log(cses.bookmarks);
-  }, [cses.bookmarks]);
+  }, []);
 
   useEffect(() => {
-    if (window.location.origin !== "https://leetcode.com") {
-      return;
-    }
-    if (!leetcode.hideLockedLinks) {
-      return;
-    }
+    if (window.location.origin !== "https://leetcode.com") return;
 
-    const hideLockedLinks = () => {
-      if (!window.location.pathname.startsWith("/problemset")) return;
-      // svg.fa-lock matches the class token exactly, so the fa-lock-keyhole
-      // icon in each row's frequency bar is not matched
-      document
-        .querySelectorAll('svg.fa-lock, [data-icon="lock"]')
-        .forEach((lock) => {
-          const link = lock.closest<HTMLAnchorElement>('a[href^="/problems/"]');
-          if (link) {
-            link.style.display = "none";
-          }
-        });
+    // LeetCode navigates client-side, so re-check the path after each navigation
+    const update = () => {
+      document.documentElement.classList.toggle(
+        "ceb-hide-locked",
+        leetcode.hideLockedLinks &&
+          window.location.pathname.startsWith("/problemset"),
+      );
     };
 
-    hideLockedLinks();
+    // Navigation API (Chrome 102+); not in this TypeScript version's DOM types
+    const navigation = (window as Window & { navigation?: EventTarget })
+      .navigation;
 
-    const observer = new MutationObserver(() => {
-      hideLockedLinks();
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
+    update();
+    navigation?.addEventListener("navigatesuccess", update);
 
     return () => {
-      observer.disconnect();
+      navigation?.removeEventListener("navigatesuccess", update);
     };
   }, [leetcode.hideLockedLinks]);
 
   useEffect(() => {
+    // these sites' CSP blocks the bubble's audio, so it's played from the background instead
     if (
-      !/^https:\/\/cses\.fi\/problemset\/(list\/)?$/.test(
-        window.location.origin + window.location.pathname,
+      !["https://chatgpt.com", "https://claude.ai"].includes(
+        window.location.origin,
       )
-    ) {
+    )
       return;
-    }
+    if (!blockedAudio.playFromBackground) return;
 
-    if (!cses.problemBookmarksEnabled) {
-      document.querySelectorAll(".section-meta").forEach((element) => {
-        element.remove();
-      });
-      document.querySelectorAll(".task-copy-button").forEach((element) => {
-        element.remove();
-      });
-      document.querySelectorAll(".task-number").forEach((element) => {
-        element.remove();
-      });
-      document.querySelectorAll(".section-number").forEach((element) => {
-        element.remove();
-      });
-      document.querySelectorAll(".task-check-toggle").forEach((element) => {
-        element.remove();
-      });
-      document.querySelectorAll("h2").forEach((heading) => {
-        const sectionHeading = heading as HTMLHeadingElement;
+    // removes every listener added below when the setting is turned off
+    const abortController = new AbortController();
+    const { signal } = abortController;
+    let lastBlockedAudioUrl = "";
 
-        sectionHeading.style.display = "";
-        sectionHeading.style.alignItems = "";
-      });
-      return;
-    }
+    document.addEventListener(
+      "securitypolicyviolation",
+      (e) => {
+        if (e.effectiveDirective !== "media-src") return;
+        lastBlockedAudioUrl = e.blockedURI;
+        console.log("[CEB] blocked audio url", e.blockedURI);
+      },
+      { signal },
+    );
 
-    const headings = document.querySelectorAll("h2");
-    let sectionNumber = 0;
-    headings.forEach((heading) => {
-      // read before adding the number label, since the key comes from the heading text
-      const sectionKey = getSectionKey(heading);
-      if (!sectionKey) return;
-      const isGeneralHeading = sectionKey === "General";
-
-      if (!isGeneralHeading) {
-        sectionNumber += 1;
-        if (!heading.querySelector(".section-number")) {
-          const numberLabel = document.createElement("span");
-
-          numberLabel.className = "section-number";
-          numberLabel.textContent = `${String(sectionNumber).padStart(2, "0")}.`;
-          numberLabel.style.marginRight = "10px";
-
-          heading.prepend(numberLabel);
-        }
-      }
-      const taskList = heading.nextSibling as HTMLUListElement | null;
-      const tasks = isGeneralHeading
-        ? []
-        : Array.from(taskList?.querySelectorAll("li.task") ?? []);
-      const totalTasksCount = isGeneralHeading
-        ? document.querySelectorAll("li.task").length
-        : tasks.length;
-      const completedTasksCount = isGeneralHeading
-        ? Array.from(document.querySelectorAll("li.task")).reduce(
-            (count, task) => {
-              const parentHeading = task.parentElement
-                ?.previousElementSibling as HTMLHeadingElement | null;
-              const parentSectionKey =
-                parentHeading?.dataset.sectionKey ?? parentHeading?.textContent;
-              const taskKey = task.querySelector("a")?.textContent;
-
-              return (
-                count +
-                Number(
-                  Boolean(
-                    parentSectionKey &&
-                      taskKey &&
-                      cses.bookmarks?.[parentSectionKey]?.[taskKey],
-                  ),
-                )
-              );
-            },
-            0,
-          )
-        : Object.keys(cses.bookmarks?.[sectionKey] ?? {}).length;
-
-      if (!isGeneralHeading && !taskList) return;
-      const existingMeta = heading.querySelector(
-        ".section-meta",
-      ) as HTMLSpanElement | null;
-      const existingProgress = heading.querySelector(
-        ".section-progress-count",
-      ) as HTMLSpanElement | null;
-      const existingResetButton = heading.querySelector(
-        ".section-reset-button",
-      ) as HTMLButtonElement | null;
-
-      heading.style.display = "flex";
-      heading.style.alignItems = "center";
-
-      if (existingProgress) {
-        existingProgress.textContent = getProgressLabel(
-          completedTasksCount,
-          totalTasksCount,
-        );
-      } else {
-        const meta = existingMeta ?? document.createElement("span");
-        const progress = document.createElement("span");
-
-        meta.className = "section-meta";
-        meta.style.marginLeft = "auto";
-        meta.style.display = "inline-flex";
-        meta.style.alignItems = "center";
-        meta.style.gap = "12px";
-
-        progress.className = "section-progress-count";
-        progress.textContent = getProgressLabel(
-          completedTasksCount,
-          totalTasksCount,
-        );
-        progress.style.fontSize = "20px";
-        progress.style.fontWeight = "400";
-        progress.style.color = "#666";
-
-        meta.appendChild(progress);
-        heading.appendChild(meta);
-      }
-
-      if (!existingResetButton) {
-        const meta =
-          existingMeta ??
-          (heading.querySelector(".section-meta") as HTMLSpanElement | null);
-        if (!meta) return;
-
-        const resetButton = document.createElement("button");
-
-        resetButton.type = "button";
-        resetButton.className = "section-reset-button";
-        resetButton.textContent = "🔁";
-        resetButton.style.fontSize = "20px";
-        resetButton.style.border = "none";
-        resetButton.style.background = "none";
-        resetButton.style.boxShadow = "none";
-        resetButton.style.padding = "8px";
-        resetButton.style.cursor = "pointer";
-        resetButton.style.transform = "translateY(1px)";
-
-        resetButton.addEventListener("click", () => {
-          const confirmReset = confirm(
-            isGeneralHeading
-              ? "Reset all CSES progress?"
-              : `Reset progress for section "${sectionKey}"?`,
+    // The bubble's shadow root is open, so composedPath() reaches into it;
+    // capture phase so it fires even if the bubble stops propagation
+    document.addEventListener(
+      "click",
+      (e) => {
+        const isAudioIcon = e
+          .composedPath()
+          .some(
+            (target) =>
+              target instanceof Element &&
+              target.id === "gdx-bubble-audio-icon",
           );
-          if (!confirmReset) return;
-          sharedStorage.set((prev) => {
-            const prevCses = prev.cses ?? { bookmarks: {} };
-            const prevBookmarks = isGeneralHeading
-              ? {}
-              : { ...(prevCses.bookmarks ?? {}) };
+        if (!isAudioIcon) return;
 
-            if (!isGeneralHeading) {
-              delete prevBookmarks[sectionKey];
-            }
-
-            return {
-              ...prev,
-              cses: {
-                ...prevCses,
-                bookmarks: prevBookmarks,
-              },
-            };
-          });
-        });
-
-        meta.appendChild(resetButton);
-      }
-      if (isGeneralHeading) return;
-      tasks.forEach((task) => {
-        const problemLink = task.querySelector("a");
-        const taskKey = problemLink?.textContent;
-        if (!taskKey) return;
-
-        const taskNumber = tasks.indexOf(task) + 1;
-        const paddedTaskNumber = String(taskNumber).padStart(2, "0");
-
-        const existingCopyButton = task.querySelector(
-          ".task-copy-button",
-        ) as HTMLButtonElement | null;
-
-        if (!existingCopyButton) {
-          const copyButton = document.createElement("button");
-
-          copyButton.type = "button";
-          copyButton.className = "task-copy-button";
-          copyButton.textContent = "⧉";
-          copyButton.title = "Copy";
-          copyButton.style.fontSize = "20px";
-          copyButton.style.margin = "0px 8px 0px 0px";
-          copyButton.style.border = "none";
-          copyButton.style.background = "transparent";
-          copyButton.style.padding = "0";
-          copyButton.style.boxShadow = "none";
-          copyButton.style.cursor = "pointer";
-
-          copyButton.addEventListener("click", async (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-
-            const notebookName = `${paddedTaskNumber}. ${taskKey}`;
-
-            try {
-              await navigator.clipboard.writeText(notebookName);
-              console.log("[CEB] copied task key", {
-                sectionKey,
-                taskKey,
-                notebookName,
-              });
-            } catch (error) {
-              console.warn("[CEB] failed to copy task key", {
-                sectionKey,
-                taskKey,
-                notebookName,
-                error,
-              });
-            }
-          });
-
-          task.prepend(copyButton);
-        }
-
-        if (!task.querySelector(".task-number")) {
-          const numberLabel = document.createElement("span");
-
-          numberLabel.className = "task-number";
-          numberLabel.textContent = `${paddedTaskNumber}.`;
-          numberLabel.style.marginRight = "6px";
-
-          task.querySelector(".task-copy-button")?.after(numberLabel);
-        }
-
-        const isChecked = Boolean(cses.bookmarks?.[sectionKey]?.[taskKey]);
-        const existingCheckmark = task.querySelector(
-          ".task-check-toggle",
-        ) as HTMLButtonElement | null;
-
-        if (existingCheckmark) {
-          existingCheckmark.dataset.checked = String(isChecked);
-          existingCheckmark.textContent = getSymbol(isChecked);
+        if (!lastBlockedAudioUrl) {
+          console.warn("[CEB] no blocked audio url captured yet");
           return;
         }
 
-        const checkmark = document.createElement("button");
-
-        checkmark.type = "button";
-        checkmark.className = "task-check-toggle";
-        checkmark.dataset.checked = String(isChecked);
-        checkmark.style.fontSize = "18px";
-        checkmark.textContent = getSymbol(isChecked);
-        checkmark.style.margin = "0px 8px";
-        checkmark.style.border = "none";
-        checkmark.style.background = "transparent";
-        checkmark.style.padding = "0";
-        checkmark.style.boxShadow = "none";
-        checkmark.style.cursor = "pointer";
-
-        checkmark.addEventListener("click", () => {
-          const nextChecked = checkmark.dataset.checked !== "true";
-
-          checkmark.dataset.checked = String(nextChecked);
-          checkmark.textContent = getSymbol(nextChecked);
-
-          sharedStorage.set((prev) => {
-            const prevCses = prev.cses ?? { bookmarks: {} };
-            const prevBookmarks = prevCses.bookmarks ?? {};
-            const sectionBookmarks = { ...(prevBookmarks[sectionKey] ?? {}) };
-
-            if (nextChecked) {
-              sectionBookmarks[taskKey] = true;
-            } else {
-              delete sectionBookmarks[taskKey];
-            }
-
-            const nextBookmarks = { ...prevBookmarks };
-
-            if (Object.keys(sectionBookmarks).length === 0) {
-              delete nextBookmarks[sectionKey];
-            } else {
-              nextBookmarks[sectionKey] = sectionBookmarks;
-            }
-
-            return {
-              ...prev,
-              cses: {
-                ...prevCses,
-                bookmarks: nextBookmarks,
-              },
-            };
-          });
+        chrome.runtime.sendMessage({
+          type: "play-audio-url",
+          url: lastBlockedAudioUrl,
         });
-
-        task.appendChild(checkmark);
-      });
-    });
-  }, [cses.bookmarks, cses.problemBookmarksEnabled]);
-
-  useEffect(() => {
-    if (window.location.origin !== "https://chatgpt.com") return;
-
-    const onCspViolation = (e: SecurityPolicyViolationEvent) => {
-      lastAudioBlockedUrlRef.current = e.blockedURI;
-      console.log("⚠️ CSP VIOLATION DETECTED:", {
-        blockedURI: e.blockedURI,
-      });
-    };
-
-    document.addEventListener("securitypolicyviolation", onCspViolation);
-
-    const attached = new WeakSet<Element>();
-    let observer: MutationObserver | null = null;
-    let rafId: number | null = null;
-
-    const waitForBubble = () => {
-      const host = document.querySelector("#gdx-bubble-host");
-      if (!host) {
-        // The extension injects this later — keep waiting
-        rafId = requestAnimationFrame(waitForBubble);
-        return;
-      }
-
-      // Shadow root is open, so we can read it directly
-      const shadowRoot = host.shadowRoot;
-      if (!shadowRoot) {
-        rafId = requestAnimationFrame(waitForBubble);
-        return;
-      }
-
-      const root = shadowRoot;
-
-      function attachListener() {
-        const icon = root.querySelector("#gdx-bubble-audio-icon");
-        if (!icon) {
-          // Bubble content is dynamic — watch for changes
-          return;
-        }
-
-        // Avoid double-binding
-        if (attached.has(icon)) return;
-        attached.add(icon);
-
-        icon.addEventListener("click", () => {
-          console.log("Audio icon clicked!");
-          console.log("Element:", icon);
-          const blockedUrl = lastAudioBlockedUrlRef.current;
-          if (!blockedUrl) {
-            console.warn("No blocked audio URL captured yet.");
-            return;
-          }
-
-          chrome.runtime.sendMessage({
-            type: "play-audio-url",
-            url: blockedUrl,
-          });
-        });
-
-        console.log("Listener attached to #gdx-bubble-audio-icon");
-      }
-
-      // Observe shadow DOM updates
-      observer = new MutationObserver(attachListener);
-      observer.observe(root, { childList: true, subtree: true });
-
-      // Try attaching right now too
-      attachListener();
-    };
-
-    waitForBubble();
+      },
+      { capture: true, signal },
+    );
 
     return () => {
-      document.removeEventListener("securitypolicyviolation", onCspViolation);
-      if (observer) observer.disconnect();
-      if (rafId !== null) cancelAnimationFrame(rafId);
+      abortController.abort();
     };
-  }, []);
+  }, [blockedAudio.playFromBackground]);
 
-  return null;
+  return isCsesProblemsetPage() ? <CsesProblemset /> : null;
 }

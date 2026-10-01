@@ -25,7 +25,7 @@ const notificationOptions = {
 
 const Popup = () => {
   const { isLight } = useStorage(exampleThemeStorage);
-  const { gemini, cses, leetcode } = useStorage(sharedStorage);
+  const { cses, leetcode, blockedAudio } = useStorage(sharedStorage);
   const logo = isLight
     ? "popup/logo_vertical.svg"
     : "popup/logo_vertical_dark.svg";
@@ -60,39 +60,19 @@ const Popup = () => {
     }
   };
 
-  const [tabOrigin, setTabOrigin] = useState<string>();
   const [tabUrl, setTabUrl] = useState<string>();
 
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, async ([tab]) => {
       if (tab?.url) {
         setTabUrl(tab.url);
-        setTabOrigin(new URL(tab.url).origin);
       }
     });
   }, []);
 
   return (
     <div className={cn("App", isLight ? "bg-slate-50" : "bg-gray-800")}>
-      {tabOrigin === "https://gemini.google.com" ? (
-        <div className="flex flex-col">
-          <Switch
-            checked={gemini.hideMyStuffRecentsPreview}
-            onChange={(checked) => {
-              sharedStorage.set((prev) => {
-                return {
-                  ...prev,
-                  gemini: {
-                    ...prev.gemini,
-                    hideMyStuffRecentsPreview: checked,
-                  },
-                };
-              });
-            }}
-            label="Hide: Recents Preview"
-          />
-        </div>
-      ) : tabUrl?.startsWith("https://leetcode.com/problemset") ? (
+      {tabUrl?.startsWith("https://leetcode.com/problemset") ? (
         <div className="flex flex-col">
           <Switch
             checked={leetcode.hideLockedLinks}
@@ -107,7 +87,7 @@ const Popup = () => {
                 };
               });
             }}
-            label="Hide: Locked Links"
+            label="Hide Locked Links"
           />
         </div>
       ) : /^https:\/\/cses\.fi\/problemset\/(list\/)?([?#].*)?$/.test(
@@ -127,7 +107,27 @@ const Popup = () => {
                 };
               });
             }}
-            label="Problem Bookmarks"
+            label="Show Problem Bookmarks"
+          />
+        </div>
+      ) : ["https://chatgpt.com", "https://claude.ai"].some((origin) =>
+          tabUrl?.startsWith(`${origin}/`),
+        ) ? (
+        <div className="flex flex-col">
+          <Switch
+            checked={blockedAudio.playFromBackground}
+            onChange={(checked) => {
+              sharedStorage.set((prev) => {
+                return {
+                  ...prev,
+                  blockedAudio: {
+                    ...prev.blockedAudio,
+                    playFromBackground: checked,
+                  },
+                };
+              });
+            }}
+            label="Play Blocked Audio"
           />
         </div>
       ) : (
