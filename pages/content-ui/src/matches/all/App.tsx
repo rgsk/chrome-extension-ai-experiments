@@ -1,6 +1,4 @@
-import { t } from "@extension/i18n";
 import { useStorage } from "@extension/shared";
-import { ToggleButton } from "@extension/ui";
 import { useEffect, useRef } from "react";
 import { sharedStorage } from "../../../../../packages/storage/lib";
 
@@ -73,7 +71,7 @@ export default function App() {
   }, [cses.bookmarks]);
 
   useEffect(() => {
-    if (window.location.href !== "https://leetcode.com/problemset/") {
+    if (window.location.origin !== "https://leetcode.com") {
       return;
     }
     if (!leetcode.hideLockedLinks) {
@@ -81,12 +79,17 @@ export default function App() {
     }
 
     const hideLockedLinks = () => {
-      document.querySelectorAll('[data-icon="lock"]').forEach((lock) => {
-        const link = lock.closest("a");
-        if (link) {
-          link.style.display = "none";
-        }
-      });
+      if (!window.location.pathname.startsWith("/problemset")) return;
+      // svg.fa-lock matches the class token exactly, so the fa-lock-keyhole
+      // icon in each row's frequency bar is not matched
+      document
+        .querySelectorAll('svg.fa-lock, [data-icon="lock"]')
+        .forEach((lock) => {
+          const link = lock.closest<HTMLAnchorElement>('a[href^="/problems/"]');
+          if (link) {
+            link.style.display = "none";
+          }
+        });
     };
 
     hideLockedLinks();
@@ -106,7 +109,11 @@ export default function App() {
   }, [leetcode.hideLockedLinks]);
 
   useEffect(() => {
-    if (window.location.href !== "https://cses.fi/problemset/") {
+    if (
+      !/^https:\/\/cses\.fi\/problemset\/(list\/)?$/.test(
+        window.location.origin + window.location.pathname,
+      )
+    ) {
       return;
     }
 
@@ -115,6 +122,12 @@ export default function App() {
         element.remove();
       });
       document.querySelectorAll(".task-copy-button").forEach((element) => {
+        element.remove();
+      });
+      document.querySelectorAll(".task-number").forEach((element) => {
+        element.remove();
+      });
+      document.querySelectorAll(".section-number").forEach((element) => {
         element.remove();
       });
       document.querySelectorAll(".task-check-toggle").forEach((element) => {
@@ -130,10 +143,25 @@ export default function App() {
     }
 
     const headings = document.querySelectorAll("h2");
+    let sectionNumber = 0;
     headings.forEach((heading) => {
+      // read before adding the number label, since the key comes from the heading text
       const sectionKey = getSectionKey(heading);
       if (!sectionKey) return;
       const isGeneralHeading = sectionKey === "General";
+
+      if (!isGeneralHeading) {
+        sectionNumber += 1;
+        if (!heading.querySelector(".section-number")) {
+          const numberLabel = document.createElement("span");
+
+          numberLabel.className = "section-number";
+          numberLabel.textContent = `${String(sectionNumber).padStart(2, "0")}.`;
+          numberLabel.style.marginRight = "10px";
+
+          heading.prepend(numberLabel);
+        }
+      }
       const taskList = heading.nextSibling as HTMLUListElement | null;
       const tasks = isGeneralHeading
         ? []
@@ -261,6 +289,9 @@ export default function App() {
         const taskKey = problemLink?.textContent;
         if (!taskKey) return;
 
+        const taskNumber = tasks.indexOf(task) + 1;
+        const paddedTaskNumber = String(taskNumber).padStart(2, "0");
+
         const existingCopyButton = task.querySelector(
           ".task-copy-button",
         ) as HTMLButtonElement | null;
@@ -284,10 +315,7 @@ export default function App() {
             event.preventDefault();
             event.stopPropagation();
 
-            const allTasks = Array.from(document.querySelectorAll("li.task"));
-            const taskNumber = allTasks.indexOf(task) + 1;
-            const paddedTaskNumber = String(taskNumber).padStart(2, "0");
-            const notebookName = `${paddedTaskNumber}. ${taskKey}.ipynb`;
+            const notebookName = `${paddedTaskNumber}. ${taskKey}`;
 
             try {
               await navigator.clipboard.writeText(notebookName);
@@ -307,6 +335,16 @@ export default function App() {
           });
 
           task.prepend(copyButton);
+        }
+
+        if (!task.querySelector(".task-number")) {
+          const numberLabel = document.createElement("span");
+
+          numberLabel.className = "task-number";
+          numberLabel.textContent = `${paddedTaskNumber}.`;
+          numberLabel.style.marginRight = "6px";
+
+          task.querySelector(".task-copy-button")?.after(numberLabel);
         }
 
         const isChecked = Boolean(cses.bookmarks?.[sectionKey]?.[taskKey]);
@@ -454,16 +492,4 @@ export default function App() {
   }, []);
 
   return null;
-  return (
-    <div className="flex items-center justify-between gap-2 rounded bg-blue-100 px-2 py-1">
-      <div className="flex gap-1 text-sm text-blue-500">
-        Edit{" "}
-        <strong className="text-blue-700">
-          pages/content-ui/src/matches/all/App.tsx
-        </strong>{" "}
-        and save to reload.
-      </div>
-      <ToggleButton className={"mt-0"}>{t("toggleTheme")}</ToggleButton>
-    </div>
-  );
 }

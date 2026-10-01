@@ -92,7 +92,7 @@ const Popup = () => {
             label="Hide: Recents Preview"
           />
         </div>
-      ) : tabUrl === "https://leetcode.com/problemset/" ? (
+      ) : tabUrl?.startsWith("https://leetcode.com/problemset") ? (
         <div className="flex flex-col">
           <Switch
             checked={leetcode.hideLockedLinks}
@@ -110,7 +110,9 @@ const Popup = () => {
             label="Hide: Locked Links"
           />
         </div>
-      ) : tabUrl === "https://cses.fi/problemset/" ? (
+      ) : /^https:\/\/cses\.fi\/problemset\/(list\/)?([?#].*)?$/.test(
+          tabUrl ?? "",
+        ) ? (
         <div className="flex flex-col">
           <Switch
             checked={cses.problemBookmarksEnabled}
